@@ -1,4 +1,6 @@
 EnchantReloadFix
 ================
 
-SKSE Plugin to remedy some of the problems related to enchantments after game reload
+SKSE Plugin for Skyrim
+
+Fix problems associated with enchanted items after game reload.
