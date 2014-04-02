@@ -4,13 +4,13 @@
 #include "skse/GameObjects.h"
 #include "skse/GameRTTI.h"
 
-using namespace EnchantmentLib;
+using namespace EnchantmentInfoLib;
 
-EnchantmentInfoMap		EnchantmentLib::_playerEnchantments;
-KnownEnchantmentsVec	EnchantmentLib::_knownBaseEnchantments;
+EnchantmentInfoMap	EnchantmentInfoLib::_playerEnchantments;
+EnchantmentVec		EnchantmentInfoLib::_knownBaseEnchantments;
 
 
-EnchantmentInfoUnion EnchantmentLib::GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx)
+EnchantmentInfoUnion EnchantmentInfoLib::GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx)
 {
 	PersistentFormManager::EnchantData entryData;
 	pPFM->weaponEnchants.GetNthItem(idx, entryData);
@@ -26,7 +26,7 @@ EnchantmentInfoUnion EnchantmentLib::GetNthPersistentEnchantmentInfo(PersistentF
 }
 
 
-bool EnchantmentLib::BuildKnownBaseEnchantmentVec()
+bool EnchantmentInfoLib::BuildKnownBaseEnchantmentVec()
 {
 	_knownBaseEnchantments.clear();
 
@@ -65,7 +65,8 @@ bool EnchantmentLib::BuildKnownBaseEnchantmentVec()
 }
 
 
-bool EnchantmentLib::BuildPersistentFormsEnchantmentMap()
+
+bool EnchantmentInfoLib::BuildPersistentFormsEnchantmentMap()
 {
 	_playerEnchantments.clear();
 
@@ -86,7 +87,7 @@ bool EnchantmentLib::BuildPersistentFormsEnchantmentMap()
 }
 
 
-EnchantmentItem* EnchantmentLib::FindBaseEnchantment(EnchantmentItem* pEnch) //base enchantment data is not stored on player-crafted enchantments
+EnchantmentItem* EnchantmentInfoLib::FindBaseEnchantment(EnchantmentItem* pEnch) //base enchantment data is not stored on player-crafted enchantments
 {
 	typedef std::vector<EffectSetting*> MagEffVec;
 	MagEffVec mgefs(pEnch->effectItemList.count);
@@ -102,7 +103,7 @@ EnchantmentItem* EnchantmentLib::FindBaseEnchantment(EnchantmentItem* pEnch) //b
 	}
 
 	//locate known base enchantment with same mgefs
-	for (KnownEnchantmentsVec::iterator baseEnchIt = _knownBaseEnchantments.begin(); baseEnchIt != _knownBaseEnchantments.end(); ++baseEnchIt)
+	for (EnchantmentVec::iterator baseEnchIt = _knownBaseEnchantments.begin(); baseEnchIt != _knownBaseEnchantments.end(); ++baseEnchIt)
 	{
 		for (MagEffVec::iterator mgefIt = mgefs.begin(); mgefIt != mgefs.end(); ++mgefIt)
 		{
@@ -119,36 +120,3 @@ EnchantmentItem* EnchantmentLib::FindBaseEnchantment(EnchantmentItem* pEnch) //b
 	return NULL;
 }
 
-
-void EnchantmentLib::RunFirstLoadEnchantmentFix()
-{
-	for (EnchantmentInfoMap::iterator it = _playerEnchantments.begin(); it != _playerEnchantments.end(); ++it)
-	{
-		if (it->second.flags != EnchantmentInfoEntry::kFlagManualCalc)
-		{
-			EnchantmentItem* baseEnch = FindBaseEnchantment(it->first);
-			if (!baseEnch)
-				baseEnch = it->first; //if no base can be found, treat enchantment as its own base
-
-			float effectCost = 0.0;
-			for (UInt32 i = 0; i < baseEnch->effectItemList.count; i++)
-			{
-				MagicItem::EffectItem* pEffectItem = NULL;
-				baseEnch->effectItemList.GetNthItem(i, pEffectItem);
-				if (pEffectItem)
-					effectCost += pEffectItem->cost;
-			}
-
-			//daaaamn... no way to check perk bonuses to find maximum power :-( (unless I check specific perks.... ugh)
-
-			//calc data from base enchantment & player enchanting skill level
-			//game truncates charge per hit value at end of calculation
-
-			//will still need to find a way to hook createEnchantment function to listen for new enchantments! (frost created while playing, e.g.)
-
-			UInt32 cost = 0; //cost = ? //formula
-			it->first->data.unk00.unk00 = cost;
-			it->first->data.unk00.unk04 = (it->first->data.unk00.unk04 | EnchantmentInfoEntry::kFlagManualCalc);
-		}
-	}
-}
