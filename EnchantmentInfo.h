@@ -3,6 +3,7 @@
 #include "skse/GameData.h"
 #include "skse/GameObjects.h"
 #include <vector>
+#include <list>
 #include <map>
 
 struct EnchantmentInfoEntry
@@ -27,17 +28,46 @@ struct EnchantmentInfoUnion
 	EnchantmentInfoUnion(EnchantmentItem* a1, EnchantmentInfoEntry a2) : enchantment(a1), entry(a2) {}
 };
 
-namespace EnchantmentLib
+class EnchantmentDataHandler
+{
+  private:
+	DataHandler* data;
+
+  public:
+	template <class Visitor>
+	void Visit(Visitor* visitor)
+	{
+		bool bContinue = true;
+		for(UInt32 i = 0; (i < data->enchantments.count) && bContinue; i++)
+		{
+			EnchantmentItem* pEnch = NULL;
+			data->enchantments.GetNthItem(i, pEnch);
+			if (pEnch)
+				bContinue = visitor->Accept(pEnch);
+		}
+	}
+
+	EnchantmentDataHandler() : data(DataHandler::GetSingleton()) {}
+};
+
+
+namespace EnchantmentInfoLib
 {
 	EnchantmentInfoUnion GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx);
 
+
+	typedef std::vector <EnchantmentItem*>						EnchantmentVec;
+	//typedef std::list <MagicItem::EffectItem*>					LinkedEffectList; //depricated, replaced by ConditionedEffectMap
+	typedef std::map <MagicItem::EffectItem*, Condition*>		ConditionedEffectMap;
 	typedef std::map <EnchantmentItem*, EnchantmentInfoEntry>	EnchantmentInfoMap;
-	typedef std::vector <EnchantmentItem*>	KnownEnchantmentsVec;
+	//typedef std::map <EnchantmentItem*, LinkedEffectList>		EnchantmentEffectMap; //depricated, replaced by EnchantmentConditionMap
+	typedef std::map <EnchantmentItem*, ConditionedEffectMap>		EnchantmentConditionMap;
 
 	extern EnchantmentInfoMap		_playerEnchantments;
-	extern KnownEnchantmentsVec		_knownBaseEnchantments;
+	extern EnchantmentVec			_knownBaseEnchantments;
 
 	bool BuildKnownBaseEnchantmentVec();
+	EnchantmentVec* BuildFullWeaponEnchantmentsList();
 	bool BuildPersistentFormsEnchantmentMap();
 	EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch);
 	void RunFirstLoadEnchantmentFix();
