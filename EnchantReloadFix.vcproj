@@ -260,6 +260,10 @@
 			</Filter>
 		</Filter>
 		<File
+			RelativePath=".\DumpDebug.h"
+			>
+		</File>
+		<File
 			RelativePath=".\EnchantmentInfo.cpp"
 			>
 		</File>
