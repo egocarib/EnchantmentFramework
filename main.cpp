@@ -5,7 +5,7 @@
 #include "MenuHandler.h"
 #include <shlobj.h>
 
-using namespace EnchantmentLib;
+using namespace EnchantmentInfoLib;
 
 
 IDebugLog					gLog;
@@ -115,10 +115,11 @@ void Serialization_Load(SKSESerializationInterface * intfc)
 	if (recordsRead)
 		_MESSAGE("%u enchantment records successfully processed.", recordsRead);
 
-	else if (BuildKnownBaseEnchantmentVec() && BuildPersistentFormsEnchantmentMap())
-		RunFirstLoadEnchantmentFix();
+	// else if (BuildKnownBaseEnchantmentVec() && BuildPersistentFormsEnchantmentMap())
+	// 	RunFirstLoadEnchantmentFix();
 
-	MenuHandler::InitializeMenuMonitor();
+	MenuHandler::InitializeMenuMonitor(); //this [or part of this other than the menu registration] should probably go in Plugin_Load instead to avoid re-constructing variables
+ 				//also I should test multiple loads to make sure it doesn't result in multiple event registrations and firings building up
 }
 
 
