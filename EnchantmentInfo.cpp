@@ -6,6 +6,9 @@
 
 using namespace EnchantmentLib;
 
+EnchantmentInfoMap		EnchantmentLib::_playerEnchantments;
+KnownEnchantmentsVec	EnchantmentLib::_knownBaseEnchantments;
+
 
 EnchantmentInfoUnion EnchantmentLib::GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx)
 {

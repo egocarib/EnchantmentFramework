@@ -27,7 +27,6 @@ struct EnchantmentInfoUnion
 	EnchantmentInfoUnion(EnchantmentItem* a1, EnchantmentInfoEntry a2) : enchantment(a1), entry(a2) {}
 };
 
-
 namespace EnchantmentLib
 {
 	EnchantmentInfoUnion GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx);
@@ -35,8 +34,8 @@ namespace EnchantmentLib
 	typedef std::map <EnchantmentItem*, EnchantmentInfoEntry>	EnchantmentInfoMap;
 	typedef std::vector <EnchantmentItem*>	KnownEnchantmentsVec;
 
-	EnchantmentInfoMap		_playerEnchantments;
-	KnownEnchantmentsVec	_knownBaseEnchantments;
+	extern EnchantmentInfoMap		_playerEnchantments;
+	extern KnownEnchantmentsVec		_knownBaseEnchantments;
 
 	bool BuildKnownBaseEnchantmentVec();
 	bool BuildPersistentFormsEnchantmentMap();
