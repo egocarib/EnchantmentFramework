@@ -3,7 +3,7 @@
 #include "skse/GameData.h"
 #include "skse/GameObjects.h"
 #include <vector>
-#include <list>
+//#include <list>
 #include <map>
 
 struct EnchantmentInfoEntry
@@ -17,7 +17,16 @@ struct EnchantmentInfoEntry
 	UInt32	flags;
 	SInt32	enchantmentCost;
 
-	EnchantmentInfoEntry(UInt32 a1 = 0, UInt32 a2 = 0, SInt32 a3 = -1) : formID(a1), flags(a2), enchantmentCost(a3) {}
+	struct ConditionData
+	{
+		bool 	hasConditions;
+		UInt32	inheritFormFormID; //(base enchantment) will need to double-check in case mod removes conditions from inheriting form.
+	};
+
+	ConditionData	cData;
+
+	EnchantmentInfoEntry(UInt32 a1 = 0, UInt32 a2 = 0, SInt32 a3 = -1)
+		: formID(a1), flags(a2), enchantmentCost(a3), cData() {}
 };
 
 struct EnchantmentInfoUnion
@@ -25,6 +34,7 @@ struct EnchantmentInfoUnion
 	EnchantmentItem*		enchantment;
 	EnchantmentInfoEntry	entry;
 
+	EnchantmentInfoUnion(EnchantmentItem* a1) : enchantment(a1), entry() {}
 	EnchantmentInfoUnion(EnchantmentItem* a1, EnchantmentInfoEntry a2) : enchantment(a1), entry(a2) {}
 };
 
@@ -53,8 +63,7 @@ class EnchantmentDataHandler
 
 namespace EnchantmentInfoLib
 {
-	EnchantmentInfoUnion GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx);
-
+	//EnchantmentInfoUnion GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx);
 
 	typedef std::vector <EnchantmentItem*>						EnchantmentVec;
 	//typedef std::list <MagicItem::EffectItem*>					LinkedEffectList; //depricated, replaced by ConditionedEffectMap
@@ -66,9 +75,9 @@ namespace EnchantmentInfoLib
 	extern EnchantmentInfoMap		_playerEnchantments;
 	extern EnchantmentVec			_knownBaseEnchantments;
 
-	bool BuildKnownBaseEnchantmentVec();
-	EnchantmentVec* BuildFullWeaponEnchantmentsList();
-	bool BuildPersistentFormsEnchantmentMap();
+	//bool BuildKnownBaseEnchantmentVec();
+	//EnchantmentVec* BuildFullWeaponEnchantmentsList();
+	//bool BuildPersistentFormsEnchantmentMap();
 	EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch);
-	void RunFirstLoadEnchantmentFix();
+	//void RunFirstLoadEnchantmentFix();
 }
