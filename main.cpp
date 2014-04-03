@@ -38,7 +38,7 @@ void Serialization_Save(SKSESerializationInterface * intfc)
 	_MESSAGE("Saving...");
 
 	//Update map with new enchantment data
-	BuildPersistentFormsEnchantmentMap();
+	//BuildPersistentFormsEnchantmentMap();    DEPRICATED - will need to be replaced when I rewrite this function.
 
 	if (_playerEnchantments.size() == 0)
 		return;
