@@ -6,85 +6,98 @@
 
 using namespace EnchantmentInfoLib;
 
+//these two will no longer be used soon, replacing with classes below:
 EnchantmentInfoMap	EnchantmentInfoLib::_playerEnchantments;
 EnchantmentVec		EnchantmentInfoLib::_knownBaseEnchantments;
 
 
-EnchantmentInfoUnion EnchantmentInfoLib::GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx)
+//KnownBaseEnchants I don't think I need to keep around - b/c have to parse the whole list again anyway.
+//playerEnchantments, though, is better to keep so I can parse only the difference and update info
+//(like condition data, cost, etc) only for the new player enchantments after menu close.
+//also - I think I should just ignore any auto-Calc player enchants now, since i cant fix them;
+//all new enchants will be manual. So no need to save them or anything. (unless for conditions?)
+class KnownBaseEnchantments : public EnchantmentInfoLib::EnchantmentVec
 {
-	PersistentFormManager::EnchantData entryData;
-	pPFM->weaponEnchants.GetNthItem(idx, entryData);
-	if (!entryData.enchantment)
-		return EnchantmentInfoUnion(NULL, EnchantmentInfoEntry());
-
-	UInt32 thisFormID = entryData.enchantment->formID;
-	UInt32 thisFlags = entryData.enchantment->data.unk00.unk04 & EnchantmentInfoEntry::kFlagManualCalc;
-	SInt32 thisEnchantmentCost = entryData.enchantment->data.unk00.unk00;
-
-	EnchantmentInfoEntry thisEnchantmentInfo(thisFormID, thisFlags, thisEnchantmentCost);
-	return EnchantmentInfoUnion(entryData.enchantment, thisEnchantmentInfo);
-}
-
-
-bool EnchantmentInfoLib::BuildKnownBaseEnchantmentVec()
-{
-	_knownBaseEnchantments.clear();
-
-	DataHandler* dh = DataHandler::GetSingleton();
-	for(UInt32 i = 0; i < dh->enchantments.count; i++)
+  public:
+	bool Accept(EnchantmentItem* pEnch)
 	{
-		EnchantmentItem* pEI = NULL;
-		dh->enchantments.GetNthItem(i, pEI);
-		TESForm* pForm = DYNAMIC_CAST(pEI, EnchantmentItem, TESForm);
-		if (pForm)
+		TESForm* pForm = DYNAMIC_CAST(pEnch, EnchantmentItem, TESForm);
+		if (pForm && ((pForm->flags & TESForm::kFlagPlayerKnows) == TESForm::kFlagPlayerKnows))
+			(*this).push_back(pEnch);
+	}
+
+	KnownBaseEnchantments() { EnchantmentDataHandler().Visit(this); }
+	//KnownBaseEnchantments(EnchantmentDataHandler* enchantments) { enchantments->Visit(this); }
+};
+
+
+class PersistentFormWeaponEnchantments : public EnchantmentInfoLib::EnchantmentInfoMap
+{
+  public:
+	static KnownBaseEnchantments* GetKnown(bool reevaluate = false)
+	{
+		static KnownBaseEnchantments known;
+		static bool bStarted = false;
+		if (bStarted)
+			return (reevaluate) ? &(known = KnownBaseEnchantments()) : &known;
+		else bStarted = true;
+		return &known;
+	}
+
+	void Update()
+	{
+		//search persistentForms, ignoring any enchantments already recorded
+		PersistentFormManager* pPFM = PersistentFormManager::GetSingleton();
+		bool bFirst = true;
+		for(UInt32 i = 0; i < pPFM->weaponEnchants.count; i++)
 		{
-			bool playerKnows = ((pForm->flags & TESForm::kFlagPlayerKnows) == TESForm::kFlagPlayerKnows);
-			if (playerKnows && (pForm->formID != 0x000FC05B)) // exclude EnchArmorResistMagic01, so we don't use it for calculations (shouldn't be knowable, vanilla error)
-				_knownBaseEnchantments.push_back(pEI);
+			PersistentFormManager::EnchantData entryData;
+			pPFM->weaponEnchants.GetNthItem(i, entryData);
+			if (!entryData.enchantment)
+				continue;
+			else if (!(entryData.enchantment->data.unk00.unk04 & EnchantmentInfoEntry::kFlagManualCalc)) //if auto-calc, happened before this plugin (or via papyrus CreateEnchantment)
+				continue;
+			else if (this->find(entryData.enchantment) != this->end()) //already added to map
+				continue;
 
-			// {
-			// 	MagicItem::EffectItem* pFirstEffect = NULL;
-			// 	pEI->effectItemList.GetNthItem(0, pFirstEffect);
-			// 	if (pFirstEffect)
-			// 		_knownBaseEnchantments[pEI] = pFirstEffect->mgef;
+			UInt32 thisFormID = entryData.enchantment->formID;
+			UInt32 thisFlags = EnchantmentInfoEntry::kFlagManualCalc; //can probably delete this flag from struct, not needed anymore.
+			SInt32 thisEnchantmentCost = entryData.enchantment->data.unk00.unk00;
+			EnchantmentInfoEntry thisEnchantmentInfo(thisFormID, thisFlags, thisEnchantmentCost);
 
-				//DEBUG ONLY:
-				 // TESFullName* pFN = DYNAMIC_CAST(pEI, EnchantmentItem, TESFullName);
-				 // TESFullName* pFN2 = DYNAMIC_CAST(_knownBaseEnchantments[pEI], EffectSetting, TESFullName);
-				 // _MESSAGE("    KnownEnchantment[%3u]:  %s (0x%08X) MGEF = %s", i, pFN ? pFN->name.data : "NO NAME", pEI->formID, pFN2 ? pFN2->name.data : "NO NAME");
-			// }
-			// else
-			// {
-			// 	 TESFullName* pFN = DYNAMIC_CAST(pEI, EnchantmentItem, TESFullName);
-			// 	 TESFullName* pFN2 = DYNAMIC_CAST(_knownBaseEnchantments[pEI], EffectSetting, TESFullName);
-			// 	 _MESSAGE("    UnknownEnchantment[%3u]:  %s (0x%08X) MGEF = %s", i, pFN ? pFN->name.data : "NO NAME", pEI->formID, pFN2 ? pFN2->name.data : "NO NAME");
-			// }
+			KnownBaseEnchantments* knownBaseEnchants = GetKnown(bFirst); //force re-evaluate the first time through the loop (necessary before calling FindBaseEnchantment)
+			bFirst = false;
+
+			EnchantmentItem* baseEnchant = FindBaseEnchantment(entryData.enchantment);
+			if (baseEnchant)
+			{
+				for (UInt32 j = 0; j < baseEnchant->effectItemList.count; ++j)
+				{
+					MagicItem::EffectItem* pEffectItem = NULL;
+					baseEnchant->effectItemList.GetNthItem(j, pEffectItem);
+					if (pEffectItem && pEffectItem->condition)
+					{
+						//NEED TO ACTUALLY APPLY THE NEW CONDITIONS TO THE ENCHANTMENT HERE TOO
+						thisEnchantmentInfo.cData.hasConditions = true;
+						thisEnchantmentInfo.cData.inheritFormFormID = baseEnchant->formID;
+						break;
+					}
+				}
+			}
+
+			(*this)[entryData.enchantment] = thisEnchantmentInfo;
 		}
 	}
-	return (_knownBaseEnchantments.size() > 0);
-}
 
-
-
-bool EnchantmentInfoLib::BuildPersistentFormsEnchantmentMap()
-{
-	_playerEnchantments.clear();
-
-	PersistentFormManager* pPersistentForms = PersistentFormManager::GetSingleton();
-	for(UInt32 i = 0; i < pPersistentForms->weaponEnchants.count; i++)
+	void Reset()
 	{
-		EnchantmentInfoUnion eU = GetNthPersistentEnchantmentInfo(pPersistentForms, i);
-		if (eU.enchantment)
-		{
-			_playerEnchantments[eU.enchantment] = eU.entry;
-			_MESSAGE("Read data from PersistentFormManager: [Enchantment: 0x%08X] [Flags: %s] [Cost: %d]"
-				,eU.entry.formID
-				,eU.entry.flags ? "MANUAL" : "AUTO"
-				,eU.entry.enchantmentCost);
-		}
+		//for new revert/load, clear map and rebuild
+		//does this need to be integrated into the Serialization_Load method?
+		//probably not, just reset here and read persistentForms, then overwrite from loaded data
 	}
-	return (_playerEnchantments.size() > 0);
-}
+
+	PersistentFormWeaponEnchantments() {/*Do Stuff*/}
+};
 
 
 EnchantmentItem* EnchantmentInfoLib::FindBaseEnchantment(EnchantmentItem* pEnch) //base enchantment data is not stored on player-crafted enchantments
@@ -103,7 +116,8 @@ EnchantmentItem* EnchantmentInfoLib::FindBaseEnchantment(EnchantmentItem* pEnch)
 	}
 
 	//locate known base enchantment with same mgefs
-	for (EnchantmentVec::iterator baseEnchIt = _knownBaseEnchantments.begin(); baseEnchIt != _knownBaseEnchantments.end(); ++baseEnchIt)
+	KnownBaseEnchantments* known = PersistentFormWeaponEnchantments::GetKnown();
+	for (KnownBaseEnchantments::iterator baseEnchIt = known->begin(); baseEnchIt != known->end(); ++baseEnchIt)
 	{
 		for (MagEffVec::iterator mgefIt = mgefs.begin(); mgefIt != mgefs.end(); ++mgefIt)
 		{
@@ -120,3 +134,45 @@ EnchantmentItem* EnchantmentInfoLib::FindBaseEnchantment(EnchantmentItem* pEnch)
 	return NULL;
 }
 
+
+
+
+// bool EnchantmentInfoLib::BuildPersistentFormsEnchantmentMap()
+// {
+// 	_playerEnchantments.clear();
+
+// 	PersistentFormManager* pPersistentForms = PersistentFormManager::GetSingleton();
+// 	for(UInt32 i = 0; i < pPersistentForms->weaponEnchants.count; i++)
+// 	{
+// 		EnchantmentInfoUnion eU = GetNthPersistentEnchantmentInfo(pPersistentForms, i);
+// 		if (eU.enchantment)
+// 		{
+// 			_playerEnchantments[eU.enchantment] = eU.entry;
+// 			_MESSAGE("Read data from PersistentFormManager: [Enchantment: 0x%08X] [Flags: %s] [Cost: %d]"
+// 				,eU.entry.formID
+// 				,eU.entry.flags ? "MANUAL" : "AUTO"
+// 				,eU.entry.enchantmentCost);
+// 		}
+// 	}
+// 	return (_playerEnchantments.size() > 0);
+// }
+
+
+
+
+// EnchantmentInfoUnion EnchantmentInfoLib::GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx)
+// {
+// 	PersistentFormManager::EnchantData entryData;
+// 	pPFM->weaponEnchants.GetNthItem(idx, entryData);
+// 	if (!entryData.enchantment)
+// 		return EnchantmentInfoUnion(NULL);
+// 	else if (!(entryData.enchantment->data.unk00.unk04 & EnchantmentInfoEntry::kFlagManualCalc)) //if auto-calc, happened before this plugin (or via papyrus CreateEnchantment)
+// 		return EnchantmentInfoUnion(NULL);
+
+// 	UInt32 thisFormID = entryData.enchantment->formID;
+// 	UInt32 thisFlags = EnchantmentInfoEntry::kFlagManualCalc;
+// 	SInt32 thisEnchantmentCost = entryData.enchantment->data.unk00.unk00;
+
+// 	EnchantmentInfoEntry thisEnchantmentInfo(thisFormID, thisFlags, thisEnchantmentCost);
+// 	return EnchantmentInfoUnion(entryData.enchantment, thisEnchantmentInfo);
+// }
