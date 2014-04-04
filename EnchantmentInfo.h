@@ -2,20 +2,18 @@
 
 #include "skse/GameData.h"
 #include "skse/GameObjects.h"
+#include "skse/GameRTTI.h"
 #include <vector>
-//#include <list>
 #include <map>
 
-struct EnchantmentInfoEntry
-{
-	enum
-	{
-		kFlagManualCalc = 0x01
-	};
 
-	UInt32	formID;
-	UInt32	flags;
-	SInt32	enchantmentCost;
+class EnchantmentInfoEntry
+{
+public:
+	enum { kFlagManualCalc = 0x01 };
+
+	EnchantmentInfoEntry(UInt32 idArg = 0, UInt32 flagArg = 0, SInt32 costArg = -1)
+		: formID(idArg), flags(flagArg), enchantmentCost(costArg), cData() {}
 
 	struct ConditionData
 	{
@@ -23,30 +21,47 @@ struct EnchantmentInfoEntry
 		UInt32	inheritFormFormID; //(base enchantment) will need to double-check in case mod removes conditions from inheriting form.
 	};
 
+	UInt32			formID;
+	UInt32			flags;
+	SInt32			enchantmentCost;
 	ConditionData	cData;
-
-	EnchantmentInfoEntry(UInt32 a1 = 0, UInt32 a2 = 0, SInt32 a3 = -1)
-		: formID(a1), flags(a2), enchantmentCost(a3), cData() {}
 };
 
-struct EnchantmentInfoUnion
+
+typedef std::vector <EnchantmentItem*>						EnchantmentVec;
+typedef std::map <EnchantmentItem*, EnchantmentInfoEntry>	EnchantmentInfoMap;
+
+class KnownBaseEnchantments : public EnchantmentVec
 {
-	EnchantmentItem*		enchantment;
-	EnchantmentInfoEntry	entry;
-
-	EnchantmentInfoUnion(EnchantmentItem* a1) : enchantment(a1), entry() {}
-	EnchantmentInfoUnion(EnchantmentItem* a1, EnchantmentInfoEntry a2) : enchantment(a1), entry(a2) {}
+public:
+	bool Accept(EnchantmentItem* pEnch)
+	{
+		TESForm* pForm = DYNAMIC_CAST(pEnch, EnchantmentItem, TESForm);
+		if (pForm && ((pForm->flags & TESForm::kFlagPlayerKnows) == TESForm::kFlagPlayerKnows))
+			(*this).push_back(pEnch);
+	}
 };
+
+
+class PersistentWeaponEnchantments : public EnchantmentInfoMap
+{
+public:
+	static KnownBaseEnchantments* GetKnown(const bool &reevaluate = false);
+	void Update();
+	void Reset();
+
+private:
+  	static bool bInitialized;
+};
+
 
 class EnchantmentDataHandler
 {
-  private:
-	DataHandler* data;
-
-  public:
+public:
 	template <class Visitor>
-	void Visit(Visitor* visitor)
+	static void Visit(Visitor* visitor)
 	{
+		static DataHandler* data = DataHandler::GetSingleton();
 		bool bContinue = true;
 		for(UInt32 i = 0; (i < data->enchantments.count) && bContinue; i++)
 		{
@@ -57,27 +72,12 @@ class EnchantmentDataHandler
 		}
 	}
 
-	EnchantmentDataHandler() : data(DataHandler::GetSingleton()) {}
+private:
+	EnchantmentDataHandler() {}
 };
 
 
 namespace EnchantmentInfoLib
 {
-	//EnchantmentInfoUnion GetNthPersistentEnchantmentInfo(PersistentFormManager* pPFM, UInt32 idx);
-
-	typedef std::vector <EnchantmentItem*>						EnchantmentVec;
-	//typedef std::list <MagicItem::EffectItem*>					LinkedEffectList; //depricated, replaced by ConditionedEffectMap
-	typedef std::map <MagicItem::EffectItem*, Condition*>		ConditionedEffectMap;
-	typedef std::map <EnchantmentItem*, EnchantmentInfoEntry>	EnchantmentInfoMap;
-	//typedef std::map <EnchantmentItem*, LinkedEffectList>		EnchantmentEffectMap; //depricated, replaced by EnchantmentConditionMap
-	typedef std::map <EnchantmentItem*, ConditionedEffectMap>		EnchantmentConditionMap;
-
-	extern EnchantmentInfoMap		_playerEnchantments;
-	extern EnchantmentVec			_knownBaseEnchantments;
-
-	//bool BuildKnownBaseEnchantmentVec();
-	//EnchantmentVec* BuildFullWeaponEnchantmentsList();
-	//bool BuildPersistentFormsEnchantmentMap();
 	EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch);
-	//void RunFirstLoadEnchantmentFix();
 }
