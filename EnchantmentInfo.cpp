@@ -74,16 +74,14 @@ void PersistentWeaponEnchantments::Reset()
 EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch) //Base enchantment data is not stored on player-crafted enchantments
 {
 	typedef std::vector<EffectSetting*> MagEffVec;
-	MagEffVec mgefs(pEnch->effectItemList.count);
+	MagEffVec mgefs;
 
 	//Insert MGEFs from passed enchantment into vector
 	for(UInt32 i = 0; i < pEnch->effectItemList.count; ++i)
 	{
 		MagicItem::EffectItem* pEffectItem = NULL;
-		EffectSetting* pMGEF = NULL;
 		pEnch->effectItemList.GetNthItem(i, pEffectItem);
-		pMGEF = pEffectItem->mgef;
-		mgefs.push_back(pMGEF);
+		mgefs.push_back(pEffectItem->mgef);
 	}
 
 	//Locate known base enchantment with matching effect list
