@@ -5,121 +5,115 @@
 #include "MenuHandler.h"
 #include <shlobj.h>
 
-using namespace EnchantmentInfoLib;
+IDebugLog						gLog;
+const char*						kLogPath = "\\My Games\\Skyrim\\Logs\\EnchantReloadFix.log";
 
+PluginHandle					g_pluginHandle = kPluginHandle_Invalid;
+SKSESerializationInterface*		g_serialization = NULL;
+const UInt32 					kSerializationDataVersion = 1;
 
-IDebugLog					gLog;
-
-const char*					kLogPath = "\\My Games\\Skyrim\\Logs\\EnchantReloadFix.log";
-
-PluginHandle				g_pluginHandle = kPluginHandle_Invalid;
-
-SKSESerializationInterface*	g_serialization = NULL;
-
-
-
-
-//___________________________________________________________________________________________________________
-//============================================= SERIALIZATION ===============================================
-
-
-const UInt32 kDataVersion = 1;
+MenuCore						menu;
+PersistentWeaponEnchantments	enchantTracker;
 
 
 void Serialization_Revert(SKSESerializationInterface * intfc)
 {
 	_MESSAGE("Initializing...");
-	_playerEnchantments.clear();
-	_knownBaseEnchantments.clear();
+	menu.InitializeMenuMonitor();
+	enchantTracker.Reset();
 }
 
 void Serialization_Save(SKSESerializationInterface * intfc)
 {
+	//Init Menu here too, for now, because New Game doesn't trigger Revert or Load.
+	menu.InitializeMenuMonitor(); 
 	_MESSAGE("Saving...");
 
 	//Update map with new enchantment data
 	//BuildPersistentFormsEnchantmentMap();    DEPRICATED - will need to be replaced when I rewrite this function.
 
-	if (_playerEnchantments.size() == 0)
-		return;
+	// if (_playerEnchantments.size() == 0)
+	// 	return;
 
-	if(intfc->OpenRecord('DATA', kDataVersion))
-	{
-		for (EnchantmentInfoMap::iterator it = _playerEnchantments.begin(); it != _playerEnchantments.end(); ++it)
-		{
-			intfc->WriteRecordData(&it->second, sizeof(it->second));
-			_MESSAGE("Wrote data to save: [Enchantment: 0x%08X] [Flags: %s] [Cost: %d]"
-				,it->second.formID
-				,it->second.flags ? "MANUAL" : "AUTO"
-				,it->second.enchantmentCost);
-		}
-	}
+	// if(intfc->OpenRecord('DATA', kSerializationDataVersion))
+	// {
+	// 	for (EnchantmentInfoMap::iterator it = _playerEnchantments.begin(); it != _playerEnchantments.end(); ++it)
+	// 	{
+	// 		intfc->WriteRecordData(&it->second, sizeof(it->second));
+	// 		_MESSAGE("Wrote data to save: [Enchantment: 0x%08X] [Flags: %s] [Cost: %d]"
+	// 			,it->second.formID
+	// 			,it->second.flags ? "MANUAL" : "AUTO"
+	// 			,it->second.enchantmentCost);
+	// 	}
+	// }
 }
 
 void Serialization_Load(SKSESerializationInterface * intfc)
 {
+	menu.InitializeMenuMonitor();
+	enchantTracker.Reset();
 	_MESSAGE("Loading...");
 
-	UInt32	type;
-	UInt32	version;
-	UInt32	length;
-	bool	error = false;
-	UInt32  recordsRead = 0;
+	// UInt32	type;
+	// UInt32	version;
+	// UInt32	length;
+	// bool	error = false;
+	// UInt32  recordsRead = 0;
 
-	while(!error && intfc->GetNextRecordInfo(&type, &version, &length))
-	{
-		switch(type)
-		{
-			case 'DATA':
-			{
-				if(version == kDataVersion)
-				{
-					for (;length > 0; length -= sizeof(EnchantmentInfoEntry))
-					{
-						_MESSAGE("  read remaining length = %d", length);
-						EnchantmentInfoEntry thisEntry;
-						UInt32 sizeRead = intfc->ReadRecordData(&thisEntry, sizeof(EnchantmentInfoEntry));
-						if (sizeRead == sizeof(EnchantmentInfoEntry))
-						{
-							_MESSAGE("  about to read thisEntry.formID..");
-							EnchantmentItem* pEnch = DYNAMIC_CAST(LookupFormByID(thisEntry.formID), TESForm, EnchantmentItem);
-							_MESSAGE("  checking if cast succeeded..");
-							if (pEnch)
-							{
-								_MESSAGE("  about set enchant flag data..");
-								pEnch->data.unk00.unk04 |= thisEntry.flags;
-								_MESSAGE("  about set enchant cost data..");
-								pEnch->data.unk00.unk00 = thisEntry.enchantmentCost;
-								_MESSAGE("Read & Set data from cosave: [Enchantment: 0x%08X] [Flags: %s] [Cost: %d]"
-									,thisEntry.formID
-									,thisEntry.flags ? "MANUAL" : "AUTO"
-									,thisEntry.enchantmentCost);
-								++recordsRead;
-							}
-						}
-						else
-							_MESSAGE("Error reading from cosave: INVALID CHUNK SIZE (%u expected %u)"
-								" -- Data entry will be skipped.", sizeRead, sizeof(EnchantmentInfoEntry));
-					}
-				}
-				else {  _MESSAGE("Error reading from cosave: UNKNOWN DATA VERSION %u, aborting...", version);   error = true;  }
-				break;
-			}
+	// while(!error && intfc->GetNextRecordInfo(&type, &version, &length))
+	// {
+	// 	switch(type)
+	// 	{
+	// 		case 'DATA':
+	// 		{
+	// 			if(version == kSerializationDataVersion)
+	// 			{
+	// 				for (;length > 0; length -= sizeof(EnchantmentInfoEntry))
+	// 				{
+	// 					_MESSAGE("  read remaining length = %d", length);
+	// 					EnchantmentInfoEntry thisEntry;
+	// 					UInt32 sizeRead = intfc->ReadRecordData(&thisEntry, sizeof(EnchantmentInfoEntry));
+	// 					if (sizeRead == sizeof(EnchantmentInfoEntry))
+	// 					{
+	// 						_MESSAGE("  about to read thisEntry.formID..");
+	// 						EnchantmentItem* pEnch = DYNAMIC_CAST(LookupFormByID(thisEntry.formID), TESForm, EnchantmentItem);
+	// 						_MESSAGE("  checking if cast succeeded..");
+	// 						if (pEnch)
+	// 						{
+	// 							_MESSAGE("  about set enchant flag data..");
+	// 							pEnch->data.unk00.unk04 |= thisEntry.flags;
+	// 							_MESSAGE("  about set enchant cost data..");
+	// 							pEnch->data.unk00.unk00 = thisEntry.enchantmentCost;
+	// 							_MESSAGE("Read & Set data from cosave: [Enchantment: 0x%08X] [Flags: %s] [Cost: %d]"
+	// 								,thisEntry.formID
+	// 								,thisEntry.flags ? "MANUAL" : "AUTO"
+	// 								,thisEntry.enchantmentCost);
+	// 							++recordsRead;
+	// 						}
+	// 					}
+	// 					else
+	// 						_MESSAGE("Error reading from cosave: INVALID CHUNK SIZE (%u expected %u)"
+	// 							" -- Data entry will be skipped.", sizeRead, sizeof(EnchantmentInfoEntry));
+	// 				}
+	// 			}
+	// 			else {  _MESSAGE("Error reading from cosave: UNKNOWN DATA VERSION %u, aborting...", version);   error = true;  }
+	// 			break;
+	// 		}
 			
-			default:
-				_MESSAGE("Error reading from cosave: UNHANDLED TYPE %08X, aborting...", type);   error = true;
-				break;
-		}
-	}
+	// 		default:
+	// 			_MESSAGE("Error reading from cosave: UNHANDLED TYPE %08X, aborting...", type);   error = true;
+	// 			break;
+	// 	}
+	// }
 
-	if (recordsRead)
-		_MESSAGE("%u enchantment records successfully processed.", recordsRead);
+	// if (recordsRead)
+	// 	_MESSAGE("%u enchantment records successfully processed.", recordsRead);
 
-	// else if (BuildKnownBaseEnchantmentVec() && BuildPersistentFormsEnchantmentMap())
-	// 	RunFirstLoadEnchantmentFix();
+	// // else if (BuildKnownBaseEnchantmentVec() && BuildPersistentFormsEnchantmentMap())
+	// // 	RunFirstLoadEnchantmentFix();
 
-	MenuHandler::InitializeMenuMonitor(); //this [or part of this other than the menu registration] should probably go in Plugin_Load instead to avoid re-constructing variables
- 				//also I should test multiple loads to make sure it doesn't result in multiple event registrations and firings building up
+	// MenuHandler::InitializeMenuMonitor(); //this [or part of this other than the menu registration] should probably go in Plugin_Load instead to avoid re-constructing variables
+ // 				//also I should test multiple loads to make sure it doesn't result in multiple event registrations and firings building up
 }
 
 
