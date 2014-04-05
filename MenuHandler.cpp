@@ -1,84 +1,63 @@
 #include "MenuHandler.h"
 #include "EnchantmentInfo.h"
-#include "common/ICriticalSection.h"
 
-#include "DumpDebug.h" //DEBUG
+LocalMenuHandler				MenuCore::thisMenu;
+BSFixedString					MenuCore::enchantMenuString;
+ConditionedWeaponEnchantments	MenuCore::cWeaponEnchants;
 
-using namespace EnchantmentInfoLib;
-
-MenuManager*		LocalMenuManager;
-BSFixedString		EnchantMenuString;
-LocalMenuHandler	g_menuHandler;
-ICriticalSection	conditionEditLock;
-
-class ConditionedWeaponEnchantments : public EnchantmentConditionMap
+bool ConditionedWeaponEnchantments::Accept(EnchantmentItem* pEnch)
 {
-  public:
-	bool Accept(EnchantmentItem* pEnch)
+	if (pEnch->data.unk10 == 0x01) //Weapon enchantment (delivery type: 'contact')
 	{
-		if (pEnch->data.unk10 == 0x01) //delivery type: 'Contact' (weapon enchantment)
+		ConditionedEffectMap conditionedEffects;
+		for (UInt32 i = 0; i < pEnch->effectItemList.count; ++i)
 		{
-			ConditionedEffectMap conditionedEffects;
-			for (UInt32 i = 0; i < pEnch->effectItemList.count; ++i)
-			{
-				MagicItem::EffectItem* pEffect = NULL;
-				pEnch->effectItemList.GetNthItem(i, pEffect);
-				if (pEffect && pEffect->condition)
-					conditionedEffects[pEffect] = pEffect->condition; // 'condition' renamed from 'unk14'
-			}
-			if (!conditionedEffects.empty()) //add to EnchantmentConditionMap
-				(*this)[pEnch] = conditionedEffects;
+			MagicItem::EffectItem* pEffect = NULL;
+			pEnch->effectItemList.GetNthItem(i, pEffect);
+			if (pEffect && pEffect->condition)
+				conditionedEffects[pEffect] = pEffect->condition; //('condition' renamed from 'unk14')
 		}
-		return true;
+		if (!conditionedEffects.empty())
+			(*this)[pEnch] = conditionedEffects;
 	}
-
-	ConditionedWeaponEnchantments() {}
-	//ConditionedWeaponEnchantments(EnchantmentDataHandler* enchantments) { enchantments->Visit(this); }
-};
-
-ConditionedWeaponEnchantments		cWeaponEnchants;
+	return true;
+}
 
 
-void MenuHandler::InitializeMenuMonitor()
+void MenuCore::InitializeMenuMonitor()
 {
-	static bool firstLoad = true;
-	if (firstLoad)
+	static bool bOnce = true;
+	if (bOnce)
 	{
-		firstLoad = false;
-		cWeaponEnchants = ConditionedWeaponEnchantments();
+		bOnce = false;
 		EnchantmentDataHandler::Visit(&cWeaponEnchants);
-		LocalMenuManager = MenuManager::GetSingleton();
-		EnchantMenuString = UIStringHolder::GetSingleton()->craftingMenu;
-		LocalMenuManager->MenuOpenCloseEventDispatcher()->AddEventSink(&g_menuHandler);
+		enchantMenuString = UIStringHolder::GetSingleton()->craftingMenu;
+		MenuManager::GetSingleton()->MenuOpenCloseEventDispatcher()->AddEventSink(&thisMenu);
 	}
 }
 
+
 EventResult LocalMenuHandler::ReceiveEvent(MenuOpenCloseEvent * evn, EventDispatcher<MenuOpenCloseEvent> * dispatcher)
 {
-	if (evn->menuName.data != EnchantMenuString.data)
+	if (evn->menuName.data != MenuCore::enchantMenuString.data)
 		return kEvent_Continue;
-
-	conditionEditLock.Enter();
-	//technically this still probably isn't threadsafe, if threads pile up and enter
-	//in wrong order - however, this is also pretty fast so I don't see how the user could
-	//conceivably open/close the crafting menu fast enough to generate any problems..
 
 	if (evn->opening) //detach conditions from weapon enchantments
 	{
-		for (ConditionedWeaponEnchantments::iterator enchIt = cWeaponEnchants.begin(); enchIt != cWeaponEnchants.end(); ++enchIt)
-			for(ConditionedEffectMap::iterator effectIt = enchIt->second.begin(); effectIt != enchIt->second.end(); ++effectIt)
+		for (CndEnchantIter enchIt = MenuCore::cWeaponEnchants.begin(); enchIt != MenuCore::cWeaponEnchants.end(); ++enchIt)
+			for(CndEffectIter effectIt = enchIt->second.begin(); effectIt != enchIt->second.end(); ++effectIt)
 				effectIt->first->condition = NULL;
 	}
 	else //re-attach conditions
 	{
-		for (ConditionedWeaponEnchantments::iterator enchIt = cWeaponEnchants.begin(); enchIt != cWeaponEnchants.end(); ++enchIt)
-			for(ConditionedEffectMap::iterator effectIt = enchIt->second.begin(); effectIt != enchIt->second.end(); ++effectIt)
+		for (CndEnchantIter enchIt = MenuCore::cWeaponEnchants.begin(); enchIt != MenuCore::cWeaponEnchants.end(); ++enchIt)
+			for(CndEffectIter effectIt = enchIt->second.begin(); effectIt != enchIt->second.end(); ++effectIt)
 				effectIt->first->condition = effectIt->second;
 	}
 
-	conditionEditLock.Leave();
-
 	if (!evn->opening)
+		enchantTracker.Update();
+
 		//ConditionalizeNewPlayerEnchantments() //vanilla bug results in base enchantment conditions being stripped from all player-enchanted items
 		//NEED TO REPLACE THIS FUNCTION
 
