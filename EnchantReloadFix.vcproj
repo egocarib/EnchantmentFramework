@@ -260,6 +260,10 @@
 			</Filter>
 		</Filter>
 		<File
+			RelativePath=".\DumpDebug.cpp"
+			>
+		</File>
+		<File
 			RelativePath=".\DumpDebug.h"
 			>
 		</File>
