@@ -58,7 +58,7 @@ void PersistentWeaponEnchantments::Update()
 				}
 			}
 			if (thisEnchantmentInfo.cData.hasConditions)
-				thisEnchantmentInfo.cData.inheritFormFormID = baseEnchant->formID;
+				thisEnchantmentInfo.cData.parentFormID = baseEnchant->formID;
 		}
 
 		(*this)[entryData.enchantment] = thisEnchantmentInfo;

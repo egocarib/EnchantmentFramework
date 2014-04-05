@@ -18,7 +18,7 @@ public:
 	struct ConditionData
 	{
 		bool 	hasConditions;
-		UInt32	inheritFormFormID; //(base enchantment) will need to double-check in case mod removes conditions from inheriting form.
+		UInt32	parentFormID; //Base enchantment that conditions should be inherited from
 	};
 
 	UInt32			formID;
