@@ -17,7 +17,7 @@ KnownBaseEnchantments* PersistentWeaponEnchantments::GetKnown(const bool &reeval
 	return &known;
 }
 
-void PersistentWeaponEnchantments::Update() //Record new enchantments crafted at the enchantment table
+void PersistentWeaponEnchantments::Update()
 {
 	PersistentFormManager* pPFM = PersistentFormManager::GetSingleton();
 	bool bFirstLoopPass = true;
@@ -42,7 +42,7 @@ void PersistentWeaponEnchantments::Update() //Record new enchantments crafted at
 		bFirstLoopPass = false;
 
 		//Inherit conditions from base enchantment, if any
-		EnchantmentItem* baseEnchant = EnchantmentInfoLib::FindBaseEnchantment(entryData.enchantment);
+		EnchantmentItem* baseEnchant = FindBaseEnchantment(entryData.enchantment);
 		if (baseEnchant)
 		{
 			for (UInt32 j = 0; j < baseEnchant->effectItemList.count; ++j)
@@ -71,7 +71,7 @@ void PersistentWeaponEnchantments::Reset()
 	bInitialized = false;
 }
 
-EnchantmentItem* EnchantmentInfoLib::FindBaseEnchantment(EnchantmentItem* pEnch) //base enchantment data is not stored on player-crafted enchantments
+EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch) //Base enchantment data is not stored on player-crafted enchantments
 {
 	typedef std::vector<EffectSetting*> MagEffVec;
 	MagEffVec mgefs(pEnch->effectItemList.count);
