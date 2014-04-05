@@ -23,6 +23,7 @@ void Serialization_Revert(SKSESerializationInterface * intfc)
 	enchantTracker.Reset();
 }
 
+
 void Serialization_Save(SKSESerializationInterface * intfc)
 {
 	_MESSAGE("Saving...");
@@ -32,17 +33,10 @@ void Serialization_Save(SKSESerializationInterface * intfc)
 		return;
 
 	if(intfc->OpenRecord('DATA', kSerializationDataVersion))
-	{
 		for (PersistentWeaponEnchantments::iterator it = enchantTracker.begin(); it != enchantTracker.end(); ++it)
-		{
 			intfc->WriteRecordData(&it->second, sizeof(it->second));
-			_MESSAGE("Wrote data to save: [Enchantment: 0x%08X] [Flags: %s] [Cost: %d]"
-				,it->second.formID
-				,it->second.flags ? "MANUAL" : "AUTO"
-				,it->second.enchantmentCost);
-		}
-	}
 }
+
 
 UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc)
 {
@@ -77,19 +71,16 @@ UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc)
 		}
 
 		enchantTracker[thisEnchant] = thisEntry; //Add to main tracker
-
-		_MESSAGE("Read & Set data from cosave: [Enchantment: 0x%08X] [Flags: %s] [Cost: %d] [Conditions: %s]"
-			,thisEntry.formID
-			,thisEntry.flags ? "MANUAL" : "AUTO"
-			,thisEntry.enchantmentCost
-		    ,thisEntry.cData.hasConditions ? "YES" : "NO");
 		return 1;
 	}
 	else
-		_MESSAGE("Error reading from cosave: INVALID CHUNK SIZE (%u expected %u)"
-		" -- Data entry will be skipped.", sizeRead, sizeof(EnchantmentInfoEntry));
-	return 0;
+	{
+		_MESSAGE("Error Reading From Cosave: INVALID CHUNK SIZE (%u Expected %u)"
+		" -- Data Entry Will Be Skipped.", sizeRead, sizeof(EnchantmentInfoEntry));
+		return 0;
+	}
 }
+
 
 void Serialization_Load(SKSESerializationInterface* intfc)
 {
@@ -110,30 +101,25 @@ void Serialization_Load(SKSESerializationInterface* intfc)
 			case 'DATA':
 			{
 				if(version == kSerializationDataVersion)
-				{
 					for (;length > 0; length -= sizeof(EnchantmentInfoEntry))
-					{
-						_MESSAGE("  read remaining length = %d", length);
 						recordsRead += ProcessLoadEntry(intfc);
-					}
-				}
 				else
 				{
-					_MESSAGE("Error reading from cosave: UNKNOWN DATA VERSION %u, aborting...", version);
+					_MESSAGE("Error Reading From Cosave: UNKNOWN DATA VERSION %u, Aborting...\n", version);
 					error = true;
 				}
 				break;
 			}
 			
 			default:
-				_MESSAGE("Error reading from cosave: UNHANDLED TYPE %08X, aborting...", type);
+				_MESSAGE("Error Reading From Cosave: UNHANDLED TYPE %08X, Aborting...\n", type);
 				error = true;
 				break;
 		}
 	}
 
-	if (recordsRead)
-		_MESSAGE("%u enchantment records successfully patched.", recordsRead);
+	if (recordsRead && !error)
+		_MESSAGE("  %u Enchantment Records Successfully Patched.\n", recordsRead);
 }
 
 
@@ -150,25 +136,25 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 		"{ Fixes player-enchanted items having inflated gold value }\n"
 		"{ and draining higher amounts of charge after game reload }\n");
 
-	// populate plugin info structure
+	//Populate plugin info structure
 	info->infoVersion =	PluginInfo::kInfoVersion;
 	info->name =		"EnchantReloadFix Plugin";
 	info->version =		1;
 
-	// store plugin handle so we can identify ourselves later
+	//Store plugin handle so we can identify ourselves later
 	g_pluginHandle = skse->GetPluginHandle();
 
 	if(skse->isEditor)
-		{  _MESSAGE("loaded in editor, marking as incompatible");   return false;  }
+		{  _MESSAGE("Loaded In Editor, Marking As Incompatible");   return false;  }
 	else if(skse->runtimeVersion != RUNTIME_VERSION_1_9_32_0)
-		{  _MESSAGE("unsupported runtime version %08X", skse->runtimeVersion);   return false;  }
+		{  _MESSAGE("Unsupported Runtime Version %08X", skse->runtimeVersion);   return false;  }
 
-	// get the serialization interface and query its version
+	//Get the serialization interface and query its version
 	g_serialization = (SKSESerializationInterface *)skse->QueryInterface(kInterface_Serialization);
 	if(!g_serialization)
-		{  _MESSAGE("couldn't get serialization interface");   return false;  }
+		{  _MESSAGE("Couldn't Get Serialization Interface");   return false;  }
 	if(g_serialization->version < SKSESerializationInterface::kVersion)
-		{  _MESSAGE("serialization interface too old (%d expected %d)", g_serialization->version, SKSESerializationInterface::kVersion);   return false;  }
+		{  _MESSAGE("Serialization Interface Too Old (%d Expected %d)", g_serialization->version, SKSESerializationInterface::kVersion);   return false;  }
 
 	return true;
 }
@@ -176,7 +162,7 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 
 bool SKSEPlugin_Load(const SKSEInterface * skse)
 {
-	// register callbacks and unique ID for serialization
+	//Register callbacks and unique ID for serialization
 	g_serialization->SetUniqueID(g_pluginHandle, 'EGOC');
 	g_serialization->SetRevertCallback(g_pluginHandle, Serialization_Revert);
 	g_serialization->SetSaveCallback(g_pluginHandle, Serialization_Save);
