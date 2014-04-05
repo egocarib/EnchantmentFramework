@@ -44,14 +44,12 @@ EventResult LocalMenuHandler::ReceiveEvent(MenuOpenCloseEvent * evn, EventDispat
 
 	if (evn->opening) //Detach conditions from weapon enchantments
 	{
-		_MESSAGE("Crafting Menu Opened");
 		for (CndEnchantIter enchIt = MenuCore::cWeaponEnchants.begin(); enchIt != MenuCore::cWeaponEnchants.end(); ++enchIt)
 			for(CndEffectIter effectIt = enchIt->second.begin(); effectIt != enchIt->second.end(); ++effectIt)
 				effectIt->first->condition = NULL;
 	}
 	else //Reattach conditions
 	{
-		_MESSAGE("Crafting Menu Closed");
 		for (CndEnchantIter enchIt = MenuCore::cWeaponEnchants.begin(); enchIt != MenuCore::cWeaponEnchants.end(); ++enchIt)
 			for(CndEffectIter effectIt = enchIt->second.begin(); effectIt != enchIt->second.end(); ++effectIt)
 				effectIt->first->condition = effectIt->second;
