@@ -38,7 +38,8 @@ public:
 	{
 		TESForm* pForm = DYNAMIC_CAST(pEnch, EnchantmentItem, TESForm);
 		if (pForm && ((pForm->flags & TESForm::kFlagPlayerKnows) == TESForm::kFlagPlayerKnows))
-			this->push_back(pEnch);
+			if (pEnch->data.unk10 == 0x01) //Weapon enchantment (delivery type: 'contact')
+				this->push_back(pEnch);
 		return true;
 	}
 };
