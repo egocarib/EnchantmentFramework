@@ -38,7 +38,8 @@ public:
 	{
 		TESForm* pForm = DYNAMIC_CAST(pEnch, EnchantmentItem, TESForm);
 		if (pForm && ((pForm->flags & TESForm::kFlagPlayerKnows) == TESForm::kFlagPlayerKnows))
-			(*this).push_back(pEnch);
+			this->push_back(pEnch);
+		return true;
 	}
 };
 
@@ -46,8 +47,11 @@ public:
 class PersistentWeaponEnchantments : public EnchantmentInfoMap
 {
 public:
+	//Get all base enchantments currently known by the player:
 	static KnownBaseEnchantments* GetKnown(const bool &reevaluate = false);
+	//Record new custom enchantments crafted at the enchantment table:
 	void Update();
+	//Reset info for new game or new save load:
 	void Reset();
 
 private:
@@ -55,7 +59,7 @@ private:
 };
 
 
-class EnchantmentDataHandler
+class EnchantmentDataHandler //Exposes list of all loaded enchantment forms
 {
 public:
 	template <class Visitor>
@@ -77,7 +81,6 @@ private:
 };
 
 
-namespace EnchantmentInfoLib
-{
-	EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch);
-}
+EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch);
+
+extern PersistentWeaponEnchantments		enchantTracker;
