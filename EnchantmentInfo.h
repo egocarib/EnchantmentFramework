@@ -84,4 +84,8 @@ private:
 
 EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch);
 
+bool IsChaosDamageEffect(EffectSetting* mgef);
+
+void FixIfChaosDamage(EnchantmentItem* pEnch);
+
 extern PersistentWeaponEnchantments		enchantTracker;
