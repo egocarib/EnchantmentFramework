@@ -154,5 +154,10 @@ void FixIfChaosDamage(EnchantmentItem* pEnch) //Detect Chaos Damage and fix its 
 		newEnchantmentCost += thisCost;
 	}
 
-	pEnch->data.unk00.unk00 = (UInt32)newEnchantmentCost;
+	//I've decided _NOT_ to update the enchantment cost right now. The reason being, it completely throws off
+	//the price of the item, making it much higher than displayed at the enchanting table. Even thhough this is
+	//technically the correct price, it kind of goes against the spirit of the fix to make items have different
+	//price & charges than are displayed at the enchanting table. Maybe eventually, that can be fixed too.
+	
+	// pEnch->data.unk00.unk00 = (UInt32)newEnchantmentCost;
 }
