@@ -32,6 +32,8 @@ void PersistentWeaponEnchantments::Update()
 		else if (this->find(entryData.enchantment) != this->end())
 			continue; //Already added to map
 
+		FixIfChaosDamage(entryData.enchantment);
+
 		UInt32 thisFormID = entryData.enchantment->formID;
 		UInt32 thisFlags = EnchantmentInfoEntry::kFlagManualCalc;
 		SInt32 thisEnchantmentCost = entryData.enchantment->data.unk00.unk00;
@@ -71,9 +73,11 @@ void PersistentWeaponEnchantments::Reset()
 	bInitialized = false;
 }
 
+
+typedef std::vector<EffectSetting*> MagEffVec;
+
 EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch) //Base enchantment data is not stored on player-crafted enchantments
 {
-	typedef std::vector<EffectSetting*> MagEffVec;
 	MagEffVec mgefs;
 
 	//Insert MGEFs from passed enchantment into vector
@@ -103,4 +107,52 @@ EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch) //Base enchantment 
 		}
 	}
 	return NULL;
+}
+
+
+bool IsChaosDamageEffect(EffectSetting* mgef)
+{
+	static DataHandler* data = DataHandler::GetSingleton();
+	static const char * dragonborn = "Dragonborn.esm";
+	static UInt32 lowBoundFormID = (data) ? ((data->GetModIndex(dragonborn)) << 24) | 0x02C46B : 0;
+	return (mgef) ? (mgef->formID >= lowBoundFormID) && (mgef->formID <= (lowBoundFormID + 0x02)) : false;
+}
+
+typedef std::vector<MagicItem::EffectItem*> MagItemVec;
+
+void FixIfChaosDamage(EnchantmentItem* pEnch) //Detect Chaos Damage and fix its non-scaling effects
+{
+	if (!pEnch || (pEnch->effectItemList.count < 3))
+		return;
+
+	MagItemVec effects;
+
+	for(UInt32 i = 0; i < pEnch->effectItemList.count; ++i)
+	{
+		MagicItem::EffectItem* pEffectItem = NULL;
+		pEnch->effectItemList.GetNthItem(i, pEffectItem);
+		if (pEffectItem && IsChaosDamageEffect(pEffectItem->mgef))
+			effects.push_back(pEffectItem);
+	}
+
+	if (effects.size() != 3)
+		return;
+	
+	if (effects[0]->magnitude == effects[1]->magnitude)
+		effects[0]->magnitude = effects[1]->magnitude = effects[2]->magnitude;
+	else if (effects[0]->magnitude == effects[2]->magnitude)
+		effects[0]->magnitude = effects[2]->magnitude = effects[1]->magnitude;
+	else if (effects[1]->magnitude == effects[2]->magnitude)
+		effects[1]->magnitude = effects[2]->magnitude = effects[0]->magnitude;
+
+	//Update new effect costs
+	float newEnchantmentCost = 0.0;
+	for (UInt32 i = 0; i < 3; ++i)
+	{
+		float thisCost = effects[i]->mgef->properties.baseCost * pow((effects[i]->magnitude * effects[i]->duration / 10.0), 1.1);
+		effects[i]->cost = thisCost;
+		newEnchantmentCost += thisCost;
+	}
+
+	pEnch->data.unk00.unk00 = (UInt32)newEnchantmentCost;
 }
