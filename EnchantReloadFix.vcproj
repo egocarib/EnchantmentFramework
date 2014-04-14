@@ -287,6 +287,10 @@
 			RelativePath="..\skse\SafeWrite.cpp"
 			>
 		</File>
+		<File
+			RelativePath=".\ScaleformExtensions.h"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
