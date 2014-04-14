@@ -5,13 +5,34 @@
 
 bool PersistentWeaponEnchantments::bInitialized = false;
 
+
+EnchantmentItem* KnownBaseEnchantments::LookupByName(const char* targetName)
+{
+	for (EnchantmentVec::iterator it = knownWeaponBaseEnchantments.begin(); it != knownWeaponBaseEnchantments.end(); ++it)
+		if (targetName == (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data)
+			return (*it);
+
+	for (EnchantmentVec::iterator it = knownArmorBaseEnchantments.begin(); it != knownArmorBaseEnchantments.end(); ++it)
+		if (targetName == (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data)
+			return (*it);
+
+	return NULL;
+}
+
+void KnownBaseEnchantments::Reset()
+{
+	knownWeaponBaseEnchantments.clear();
+	knownArmorBaseEnchantments.clear();
+}
+
+
 KnownBaseEnchantments* PersistentWeaponEnchantments::GetKnown(const bool &reevaluate)
 {
 	static KnownBaseEnchantments known;
 	if (reevaluate || !bInitialized)
 	{
 		bInitialized = true;
-		known.clear();
+		known.Reset();
 		EnchantmentDataHandler::Visit(&known);
 	}
 	return &known;
@@ -89,8 +110,13 @@ EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch) //Base enchantment 
 	}
 
 	//Locate known base enchantment with matching effect list
-	KnownBaseEnchantments* known = PersistentWeaponEnchantments::GetKnown();
-	for (KnownBaseEnchantments::iterator baseEnchIt = known->begin(); baseEnchIt != known->end(); ++baseEnchIt)
+	EnchantmentVec* known = NULL;
+	if (pEnch->data.unk10 == 0x01) //Weapon enchantment (delivery type: 'contact')
+		known = &PersistentWeaponEnchantments::GetKnown()->knownWeaponBaseEnchantments;
+	else
+		known = &PersistentWeaponEnchantments::GetKnown()->knownArmorBaseEnchantments;
+
+	for (EnchantmentVec::iterator baseEnchIt = known->begin(); baseEnchIt != known->end(); ++baseEnchIt)
 	{
 		if ((*baseEnchIt)->effectItemList.count != pEnch->effectItemList.count) //Compare effect list length
 			continue;
