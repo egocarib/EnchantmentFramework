@@ -31,19 +31,33 @@ public:
 typedef std::vector <EnchantmentItem*>						EnchantmentVec;
 typedef std::map <EnchantmentItem*, EnchantmentInfoEntry>	EnchantmentInfoMap;
 
-class KnownBaseEnchantments : public EnchantmentVec
+class KnownBaseEnchantments
 {
 public:
 	bool Accept(EnchantmentItem* pEnch)
 	{
 		TESForm* pForm = DYNAMIC_CAST(pEnch, EnchantmentItem, TESForm);
 		if (pForm && ((pForm->flags & TESForm::kFlagPlayerKnows) == TESForm::kFlagPlayerKnows))
-			if (pEnch->data.unk10 == 0x01) //Weapon enchantment (delivery type: 'contact')
-				this->push_back(pEnch);
+		{
+			if (pEnch->data.unk10 == 0x01) //Delivery type: 'contact'
+				knownWeaponBaseEnchantments.push_back(pEnch);
+			else
+				knownArmorBaseEnchantments.push_back(pEnch);
+		}
 		return true;
 	}
+
+	//Find known base enchantment from targetName:
+	EnchantmentItem* LookupByName(const char* targetName);
+	//Clear vectors:
+	void Reset();
+
+	EnchantmentVec knownWeaponBaseEnchantments;
+	EnchantmentVec knownArmorBaseEnchantments;
 };
 
+
+#define REEVALUATE true
 
 class PersistentWeaponEnchantments : public EnchantmentInfoMap
 {
