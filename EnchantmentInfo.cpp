@@ -9,11 +9,11 @@ bool PersistentWeaponEnchantments::bInitialized = false;
 EnchantmentItem* KnownBaseEnchantments::LookupByName(const char* targetName)
 {
 	for (EnchantmentVec::iterator it = knownWeaponBaseEnchantments.begin(); it != knownWeaponBaseEnchantments.end(); ++it)
-		if (targetName == (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data)
+		if (strcmp(targetName, (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data) == 0)
 			return (*it);
 
 	for (EnchantmentVec::iterator it = knownArmorBaseEnchantments.begin(); it != knownArmorBaseEnchantments.end(); ++it)
-		if (targetName == (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data)
+		if (strcmp(targetName, (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data) == 0)
 			return (*it);
 
 	return NULL;
@@ -95,8 +95,6 @@ void PersistentWeaponEnchantments::Reset()
 }
 
 
-typedef std::vector<EffectSetting*> MagEffVec;
-
 EnchantmentItem* FindBaseEnchantment(EnchantmentItem* pEnch) //Base enchantment data is not stored on player-crafted enchantments
 {
 	MagEffVec mgefs;
@@ -144,14 +142,12 @@ bool IsChaosDamageEffect(EffectSetting* mgef)
 	return (mgef) ? (mgef->formID >= lowBoundFormID) && (mgef->formID <= (lowBoundFormID + 0x02)) : false;
 }
 
-typedef std::vector<MagicItem::EffectItem*> MagItemVec;
-
 void FixIfChaosDamage(EnchantmentItem* pEnch) //Detect Chaos Damage and fix its non-scaling effects
 {
 	if (!pEnch || (pEnch->effectItemList.count < 3))
 		return;
 
-	MagItemVec effects;
+	EffectItemVec effects;
 
 	for(UInt32 i = 0; i < pEnch->effectItemList.count; ++i)
 	{
