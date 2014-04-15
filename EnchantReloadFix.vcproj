@@ -288,7 +288,11 @@
 			>
 		</File>
 		<File
-			RelativePath=".\ScaleformExtensions.h"
+			RelativePath=".\scaleform\ScaleformExtensions.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\scaleform\ScaleformExtensions.h"
 			>
 		</File>
 	</Files>
