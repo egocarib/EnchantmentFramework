@@ -3,7 +3,7 @@
 #include "skse/GameRTTI.h"
 #include "EnchantmentInfo.h"
 #include "MenuHandler.h"
-#include "ScaleformExtensions.h"
+#include "scaleform/ScaleformExtensions.h"
 #include <shlobj.h>
 
 IDebugLog						gLog;
@@ -127,7 +127,8 @@ void Serialization_Load(SKSESerializationInterface* intfc)
 
 bool Scaleform_Register(GFxMovieView * view, GFxValue * root)
 {
-	RegisterFunction <Scaleform_SetSecondaryEffectValues>(root, view, "SetSecondaryEffectValues");
+	RegisterFunction <Scaleform_IdentifySelectedEnchantment>(root, view, "IdentifySelectedEnchantment");
+	RegisterFunction <Scaleform_UpdateSecondaryEffectValues>(root, view, "UpdateSecondaryEffectValues");
 	return true;
 }
 
