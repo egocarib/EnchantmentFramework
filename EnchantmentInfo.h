@@ -7,6 +7,10 @@
 #include <map>
 
 
+typedef std::vector<EffectSetting*> 		MagEffVec;
+typedef std::vector<MagicItem::EffectItem*> EffectItemVec;
+
+
 class EnchantmentInfoEntry
 {
 public:
