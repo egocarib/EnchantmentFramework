@@ -84,6 +84,9 @@ void PersistentWeaponEnchantments::Update()
 					MagicItem::EffectItem* pNew = NULL;
 					entryData.enchantment->effectItemList.GetNthItem(j, pNew);
 					pNew->condition = pEffectItem->condition;
+					// (weirdly enough, unlike the serialization load method, this
+					//  doesn't cause any problems... I can reload the game many
+					//  times and the condition stays valid and doesn't cause a crash)
 				}
 			}
 			if (thisEnchantmentInfo.cData.hasConditions)
