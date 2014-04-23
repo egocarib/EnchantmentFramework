@@ -39,7 +39,7 @@ void MenuCore::InitializeMenuMonitor()
 
 EventResult LocalMenuHandler::ReceiveEvent(MenuOpenCloseEvent * evn, EventDispatcher<MenuOpenCloseEvent> * dispatcher)
 {
-	if (evn->menuName.data != MenuCore::enchantMenuString.data)
+	if (!evn || (strcmp(evn->menuName.data, MenuCore::enchantMenuString.data) != 0))
 		return kEvent_Continue;
 
 	if (evn->opening) //Detach conditions from weapon enchantments
