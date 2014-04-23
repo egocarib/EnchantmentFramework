@@ -52,22 +52,25 @@ public:
 	}
 
 	//Find known base enchantment from targetName:
-	EnchantmentItem* LookupByName(const char* targetName);
+	EnchantmentItem* LookupByName(const char* targetName, char hint = 'w');
 	//Clear vectors:
 	void Reset();
 
 	EnchantmentVec knownWeaponBaseEnchantments;
 	EnchantmentVec knownArmorBaseEnchantments;
+
+	typedef std::map<const char*, EnchantmentItem*> NamedEnchantMap;
+	static NamedEnchantMap discoveredEnchantments;
 };
 
 
-#define REEVALUATE true
+#define INVALIDATE true
 
 class PersistentWeaponEnchantments : public EnchantmentInfoMap
 {
 public:
 	//Get all base enchantments currently known by the player:
-	static KnownBaseEnchantments* GetKnown(const bool &reevaluate = false);
+	static KnownBaseEnchantments* GetKnown(const bool &invalidate = false);
 	//Record new custom enchantments crafted at the enchantment table:
 	void Update();
 	//Reset info for new game or new save load:
