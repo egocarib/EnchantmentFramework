@@ -3,18 +3,22 @@
 #include "skse/GameObjects.h"
 
 
-bool PersistentWeaponEnchantments::bInitialized = false;
 
+KnownBaseEnchantments::NamedEnchantMap KnownBaseEnchantments::discoveredEnchantments;
 
-EnchantmentItem* KnownBaseEnchantments::LookupByName(const char* targetName)
+EnchantmentItem* KnownBaseEnchantments::LookupByName(const char* targetName, char hint) //'w' for weapon, 'a' for armor
 {
-	for (EnchantmentVec::iterator it = knownWeaponBaseEnchantments.begin(); it != knownWeaponBaseEnchantments.end(); ++it)
-		if (strcmp(targetName, (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data) == 0)
-			return (*it);
+	if (discoveredEnchantments.count(targetName) > 0)
+		return discoveredEnchantments[targetName];
+
+	if (hint != 'a')
+		for (EnchantmentVec::iterator it = knownWeaponBaseEnchantments.begin(); it != knownWeaponBaseEnchantments.end(); ++it)
+			if (strcmp(targetName, (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data) == 0)
+				return discoveredEnchantments[targetName] = (*it);
 
 	for (EnchantmentVec::iterator it = knownArmorBaseEnchantments.begin(); it != knownArmorBaseEnchantments.end(); ++it)
 		if (strcmp(targetName, (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data) == 0)
-			return (*it);
+			return discoveredEnchantments[targetName] = (*it);
 
 	return NULL;
 }
@@ -26,10 +30,12 @@ void KnownBaseEnchantments::Reset()
 }
 
 
-KnownBaseEnchantments* PersistentWeaponEnchantments::GetKnown(const bool &reevaluate)
+bool PersistentWeaponEnchantments::bInitialized = false;
+
+KnownBaseEnchantments* PersistentWeaponEnchantments::GetKnown(const bool &invalidate)
 {
 	static KnownBaseEnchantments known;
-	if (reevaluate || !bInitialized)
+	if (invalidate || !bInitialized)
 	{
 		bInitialized = true;
 		known.Reset();
@@ -160,6 +166,7 @@ void FixIfChaosDamage(EnchantmentItem* pEnch) //Detect Chaos Damage and fix its 
 	if (effects.size() != 3)
 		return;
 	
+	//Technically this might not always be "correct" -- for instance, it ignores elemental Enchanting perks.
 	if (effects[0]->magnitude == effects[1]->magnitude)
 		effects[0]->magnitude = effects[1]->magnitude = effects[2]->magnitude;
 	else if (effects[0]->magnitude == effects[2]->magnitude)
@@ -176,10 +183,8 @@ void FixIfChaosDamage(EnchantmentItem* pEnch) //Detect Chaos Damage and fix its 
 		newEnchantmentCost += thisCost;
 	}
 
-	//I've decided _NOT_ to update the enchantment cost right now. The reason being, it completely throws off
-	//the price of the item, making it much higher than displayed at the enchanting table. Even thhough this is
-	//technically the correct price, it kind of goes against the spirit of the fix to make items have different
-	//price & charges than are displayed at the enchanting table. Maybe eventually, that can be fixed too.
-	
+	//Although updating the cost would be technically correct, it also throws off the price of the enchanted item
+	//compared to what was displayed at the enchanting table, which seems to go against the spirit of this patch.
+
 	// pEnch->data.unk00.unk00 = (UInt32)newEnchantmentCost;
 }
