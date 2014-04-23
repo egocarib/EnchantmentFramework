@@ -50,25 +50,29 @@ UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc)
 
 		thisEnchant->data.unk00.unk04 |= thisEntry.flags; //Set to manualCalc and correct cost
 		thisEnchant->data.unk00.unk00 = thisEntry.enchantmentCost;
+		
+		//This ended up causing a crash on subsequent loads, most likely because the game rebuilds the condition table.
+		//I could probably work around it by detaching all conditions during Revert, and then letting the Load process
+		//re-attach them. But I'm just going to disable them for now to be safe, it's relatively unimportant.
 
-		if (thisEntry.cData.hasConditions) //Update enchantment conditions
-		{
-			EnchantmentItem* parentEnchant = DYNAMIC_CAST(LookupFormByID(thisEntry.cData.parentFormID), TESForm, EnchantmentItem);
-			if (parentEnchant)
-			{
-				for (UInt32 i = 0; (i < parentEnchant->effectItemList.count) && (i < thisEnchant->effectItemList.count); ++i)
-				{
-					MagicItem::EffectItem* parentEffect = NULL;
-					parentEnchant->effectItemList.GetNthItem(i, parentEffect);
-					if (parentEffect && parentEffect->condition)
-					{
-						MagicItem::EffectItem* childEffect = NULL;
-						thisEnchant->effectItemList.GetNthItem(i, childEffect);
-						childEffect->condition = parentEffect->condition;
-					}
-				}
-			}
-		}
+		// if (thisEntry.cData.hasConditions) //Update enchantment conditions
+		// {
+		// 	EnchantmentItem* parentEnchant = DYNAMIC_CAST(LookupFormByID(thisEntry.cData.parentFormID), TESForm, EnchantmentItem);
+		// 	if (parentEnchant)
+		// 	{
+		// 		for (UInt32 i = 0; (i < parentEnchant->effectItemList.count) && (i < thisEnchant->effectItemList.count); ++i)
+		// 		{
+		// 			MagicItem::EffectItem* parentEffect = NULL;
+		// 			parentEnchant->effectItemList.GetNthItem(i, parentEffect);
+		// 			if (parentEffect && parentEffect->condition)
+		// 			{
+		// 				MagicItem::EffectItem* childEffect = NULL;
+		// 				thisEnchant->effectItemList.GetNthItem(i, childEffect);
+		// 				childEffect->condition = parentEffect->condition;
+		// 			}
+		// 		}
+		// 	}
+		// }
 
 		enchantTracker[thisEnchant] = thisEntry; //Add to main tracker
 		return 1;
