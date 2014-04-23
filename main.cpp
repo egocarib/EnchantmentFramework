@@ -3,14 +3,12 @@
 #include "skse/GameRTTI.h"
 #include "EnchantmentInfo.h"
 #include "MenuHandler.h"
-#include "scaleform/ScaleformExtensions.h"
 #include <shlobj.h>
 
 IDebugLog						gLog;
 const char*						kLogPath = "\\My Games\\Skyrim\\Logs\\EnchantReloadFix.log";
 
 PluginHandle					g_pluginHandle = kPluginHandle_Invalid;
-SKSEScaleformInterface*			g_scaleform = NULL;
 SKSESerializationInterface*		g_serialization = NULL;
 const UInt32 					kSerializationDataVersion = 1;
 
@@ -52,7 +50,7 @@ UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc)
 
 		thisEnchant->data.unk00.unk04 |= thisEntry.flags; //Set to manualCalc and correct cost
 		thisEnchant->data.unk00.unk00 = thisEntry.enchantmentCost;
-		
+
 		if (thisEntry.cData.hasConditions) //Update enchantment conditions
 		{
 			EnchantmentItem* parentEnchant = DYNAMIC_CAST(LookupFormByID(thisEntry.cData.parentFormID), TESForm, EnchantmentItem);
@@ -125,14 +123,6 @@ void Serialization_Load(SKSESerializationInterface* intfc)
 }
 
 
-bool Scaleform_Register(GFxMovieView * view, GFxValue * root)
-{
-	RegisterFunction <Scaleform_IdentifySelectedEnchantment>(root, view, "IdentifySelectedEnchantment");
-	RegisterFunction <Scaleform_UpdateSecondaryEffectValues>(root, view, "UpdateSecondaryEffectValues");
-	return true;
-}
-
-
 extern "C"
 {
 
@@ -158,13 +148,6 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 	else if(skse->runtimeVersion != RUNTIME_VERSION_1_9_32_0)
 		{  _MESSAGE("Unsupported Runtime Version %08X", skse->runtimeVersion);   return false;  }
 
-	// get the scaleform interface and query its version
-	g_scaleform = (SKSEScaleformInterface *)skse->QueryInterface(kInterface_Scaleform);
-	if(!g_scaleform)
-		{  _MESSAGE("couldn't get scaleform interface");   return false;  }
-	if(g_scaleform->interfaceVersion < SKSEScaleformInterface::kInterfaceVersion)
-		{  _MESSAGE("scaleform interface too old (%d expected %d)", g_scaleform->interfaceVersion, SKSEScaleformInterface::kInterfaceVersion);   return false;  }
-
 	//Get the serialization interface and query its version
 	g_serialization = (SKSESerializationInterface *)skse->QueryInterface(kInterface_Serialization);
 	if(!g_serialization)
@@ -178,9 +161,6 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 
 bool SKSEPlugin_Load(const SKSEInterface * skse)
 {
-	//Register scaleform callbacks
-	g_scaleform->Register("EnchantReloadFix", Scaleform_Register);
-
 	//Register callbacks and unique ID for serialization
 	g_serialization->SetUniqueID(g_pluginHandle, 'EGOC');
 	g_serialization->SetRevertCallback(g_pluginHandle, Serialization_Revert);
