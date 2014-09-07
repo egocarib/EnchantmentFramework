@@ -18,8 +18,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)"
+			IntermediateDirectory="IntermediateBuild"
 			ConfigurationType="2"
 			CharacterSet="2"
 			>
@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir);$(SolutionDir)\.."
+				AdditionalIncludeDirectories="&quot;..\[SKSE]\&quot;;&quot;..\[SKSE]\skse\&quot;;&quot;$(SolutionDir)&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;PLUGIN_EXAMPLE_EXPORTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -63,7 +63,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="2"
-				ModuleDefinitionFile="exports.def"
+				ModuleDefinitionFile="src/exports.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -92,8 +92,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(ProjectDir)$(ConfigurationName)"
+			IntermediateDirectory="IntermediateBuild"
 			ConfigurationType="2"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="$(SolutionDir);$(SolutionDir)\.."
+				AdditionalIncludeDirectories="&quot;..\[PluginLibrary]&quot;;&quot;..\[SKSE]\&quot;;&quot;..\[SKSE]\skse\&quot;;&quot;$(SolutionDir)&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;PLUGIN_EXAMPLE_EXPORTS"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -138,7 +138,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				LinkIncremental="1"
-				ModuleDefinitionFile="exports.def"
+				ModuleDefinitionFile="src/exports.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -171,7 +171,6 @@
 	<References>
 		<ProjectReference
 			ReferencedProjectIdentifier="{20C6411C-596F-4B85-BE4E-8BC91F59D8A6}"
-			RelativePathToProject="..\common\common_vc9.vcproj"
 		/>
 	</References>
 	<Files>
@@ -182,59 +181,67 @@
 				Name="api"
 				>
 				<File
-					RelativePath="..\skse\GameAPI.cpp"
+					RelativePath="..\[SKSE]\skse\skse\GameAPI.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameAPI.h"
+					RelativePath="..\[SKSE]\skse\skse\GameAPI.h"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameData.cpp"
+					RelativePath="..\[SKSE]\skse\skse\GameData.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameData.h"
+					RelativePath="..\[SKSE]\skse\skse\GameData.h"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameEvents.cpp"
+					RelativePath="..\[SKSE]\skse\skse\GameEvents.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameEvents.h"
+					RelativePath="..\[SKSE]\skse\skse\GameEvents.h"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameForms.cpp"
+					RelativePath="..\[SKSE]\skse\skse\GameForms.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameForms.h"
+					RelativePath="..\[SKSE]\skse\skse\GameForms.h"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameMenus.cpp"
+					RelativePath="..\[SKSE]\skse\skse\GameMenus.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameMenus.h"
+					RelativePath="..\[SKSE]\skse\skse\GameMenus.h"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameRTTI.cpp"
+					RelativePath="..\[SKSE]\skse\skse\GameReferences.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameRTTI.h"
+					RelativePath="..\[SKSE]\skse\skse\GameReferences.h"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameTypes.cpp"
+					RelativePath="..\[SKSE]\skse\skse\GameRTTI.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\GameTypes.h"
+					RelativePath="..\[SKSE]\skse\skse\GameRTTI.h"
+					>
+				</File>
+				<File
+					RelativePath="..\[SKSE]\skse\skse\GameTypes.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\[SKSE]\skse\skse\GameTypes.h"
 					>
 				</File>
 			</Filter>
@@ -242,49 +249,89 @@
 				Name="scaleform"
 				>
 				<File
-					RelativePath="..\skse\ScaleformAPI.cpp"
+					RelativePath="..\[SKSE]\skse\skse\ScaleformAPI.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\ScaleformAPI.h"
+					RelativePath="..\[SKSE]\skse\skse\ScaleformAPI.h"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\ScaleformCallbacks.cpp"
+					RelativePath="..\[SKSE]\skse\skse\ScaleformCallbacks.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\skse\ScaleformCallbacks.h"
+					RelativePath="..\[SKSE]\skse\skse\ScaleformCallbacks.h"
 					>
 				</File>
 			</Filter>
 		</Filter>
+		<Filter
+			Name="common"
+			>
+			<File
+				RelativePath="..\[SKSE]\common\IDataStream.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\[SKSE]\common\IDataStream.h"
+				>
+			</File>
+			<File
+				RelativePath="..\[SKSE]\common\IDebugLog.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\[SKSE]\common\IDebugLog.h"
+				>
+			</File>
+			<File
+				RelativePath="..\[SKSE]\common\IErrors.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\[SKSE]\common\IErrors.h"
+				>
+			</File>
+			<File
+				RelativePath="..\[SKSE]\common\IFileStream.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\[SKSE]\common\IFileStream.h"
+				>
+			</File>
+		</Filter>
 		<File
-			RelativePath=".\EnchantmentInfo.cpp"
+			RelativePath="src\EnchantmentInfo.cpp"
 			>
 		</File>
 		<File
-			RelativePath=".\EnchantmentInfo.h"
+			RelativePath="src\EnchantmentInfo.h"
 			>
 		</File>
 		<File
-			RelativePath=".\exports.def"
+			RelativePath="src\exports.def"
 			>
 		</File>
 		<File
-			RelativePath=".\main.cpp"
+			RelativePath=".\src\GamePatches.h"
 			>
 		</File>
 		<File
-			RelativePath=".\MenuHandler.cpp"
+			RelativePath="src\main.cpp"
 			>
 		</File>
 		<File
-			RelativePath=".\MenuHandler.h"
+			RelativePath="src\MenuHandler.cpp"
 			>
 		</File>
 		<File
-			RelativePath="..\skse\SafeWrite.cpp"
+			RelativePath="src\MenuHandler.h"
+			>
+		</File>
+		<File
+			RelativePath="..\[SKSE]\skse\skse\SafeWrite.cpp"
 			>
 		</File>
 	</Files>
