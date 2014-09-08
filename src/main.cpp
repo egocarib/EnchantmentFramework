@@ -5,7 +5,7 @@
 #include "MenuHandler.h"
 #include "EnchantmentDataPluginInterface.h"
 #include "[PluginLibrary]/SerializeForm.h"
-#include "GamePatches.h"
+#include "CraftHooks.h"
 #include <shlobj.h>
 
 IDebugLog						gLog;
@@ -209,8 +209,8 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 
 bool SKSEPlugin_Load(const SKSEInterface * skse)
 {
-	//GamePatches::WeaponEnchantCraftHook::CraftHook_Commit();
-	GamePatches::CraftHook_Internal_Commit();
+	//CraftHooks::WeaponEnchantCraftHook::CraftHook_Commit();
+	CraftHooks::CraftHook_Commit();
 
 	//Register callbacks and unique ID for serialization
 	g_serialization->SetUniqueID(g_pluginHandle, 'EGOC');
