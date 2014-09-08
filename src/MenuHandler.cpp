@@ -4,7 +4,7 @@
 #include "skse/GameRTTI.h" //remove this after debug, not needed
 
 LocalMenuHandler				MenuCore::thisMenu;
-BSFixedString					MenuCore::enchantMenuString;
+BSFixedString					MenuCore::craftingMenu;
 ConditionedWeaponEnchantments	MenuCore::cWeaponEnchants;
 
 #define MARK true
@@ -119,7 +119,7 @@ void MenuCore::InitializeMenuMonitor()
 	{
 		bOnce = false;
 		EnchantmentDataHandler::Visit(&cWeaponEnchants);
-		enchantMenuString = UIStringHolder::GetSingleton()->craftingMenu;
+		craftingMenu = UIStringHolder::GetSingleton()->craftingMenu;
 		MenuManager::GetSingleton()->MenuOpenCloseEventDispatcher()->AddEventSink(&thisMenu);
 	}
 }
@@ -127,7 +127,7 @@ void MenuCore::InitializeMenuMonitor()
 
 EventResult LocalMenuHandler::ReceiveEvent(MenuOpenCloseEvent* evn, EventDispatcher<MenuOpenCloseEvent>* dispatcher)
 {
-	if (!evn || (strcmp(evn->menuName.data, MenuCore::enchantMenuString.data) != 0))
+	if (!evn || (strcmp(evn->menuName.data, MenuCore::craftingMenu.data) != 0))
 		return kEvent_Continue;
 
 	if (evn->opening)
@@ -165,6 +165,10 @@ EventResult LocalMenuHandler::ReceiveEvent(MenuOpenCloseEvent* evn, EventDispatc
 
 EventResult TESTrackedStatsEventHandler::ReceiveEvent(TESTrackedStatsEvent * evn, EventDispatcher<TESTrackedStatsEvent> * dispatcher)
 {
-	_MESSAGE("received Tracked Stats Event!    \"%s\" = %u", evn->statName.data, evn->newValue);
+	if (strcmp(evn->statName.data, TrackedStatsStringHolder::GetSingleton()->magicItemsMade.data) == 0)
+	{
+		_MESSAGE("Received magicItemMade event!");
+	}
+
 	return kEvent_Continue;
 }
