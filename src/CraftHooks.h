@@ -12,8 +12,19 @@ namespace CraftHooks
 EnchantmentItem* __stdcall HandleCraftedEnchantment(tArray<MagicItem::EffectItem>* effectArray, EnchantmentItem* createdEnchantment)
 {
 
+	//CraftHandler::ReportEffects(effectArray);
+
 
 //DEBUG ---------------------------------------------------------------------------------------
+
+	_MESSAGE("\nCreateEnchantment event for enchantment 0x%08X", createdEnchantment->formID);
+	for (UInt32 n = 0; n < effectArray->count; n++)
+	{
+		MagicItem::EffectItem* effectItem = NULL;
+		effectItem = &effectArray->arr.entries[n];
+		_MESSAGE("    effect %u mgef  =  %s [%08X]", n, ((DYNAMIC_CAST(effectItem->mgef, EffectSetting, TESFullName))->name.data), effectItem->mgef->formID);
+	}
+
 	// _MESSAGE("CreateEnchantment called for enchantment 0x%08X", createdEnchantment->formID);
 	// for (UInt32 n = 0; n < effectArray->count; n++)
 	// {
@@ -92,4 +103,32 @@ void CraftHook_Commit(void)
 	// 	}
 
 	// };
+
+
+class GetCostliestEffectItemHook : public MagicItem
+{
+public:
+	EffectItem* CostliestEffect_Hook(UInt32 arg1, bool arg2)
+	{
+		EffectItem* result = CALL_MEMBER_FN(this, GetCostliestEffectItem)(arg1, arg2);
+
+		_MESSAGE("\nCostliestEffect Event");
+
+		MagicItem* magicItem = ((MagicItem*)this);
+		EnchantmentItem* enchantment = DYNAMIC_CAST(magicItem, MagicItem, EnchantmentItem);
+		if (enchantment)
+			_MESSAGE("    thisEnchantment = %08X [%s]", enchantment->formID, (DYNAMIC_CAST(enchantment, EnchantmentItem, TESFullName))->name.data);
+
+		return result;
+	}
+
+	static void CostliestEffect_Hook_Commit(void)
+	{
+		WriteRelCall(0x00851DEB, GetFnAddr(&GetCostliestEffectItemHook::CostliestEffect_Hook));
+	}
+
+	// MEMBER_FN_PREFIX(MagicItem);
+	// DEFINE_MEMBER_FN(GetCostliestEffectItem, EffectItem *, 0x00407860, int arg1, bool arg2);
+};
+
 };

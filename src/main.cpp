@@ -211,6 +211,7 @@ bool SKSEPlugin_Load(const SKSEInterface * skse)
 {
 	//CraftHooks::WeaponEnchantCraftHook::CraftHook_Commit();
 	CraftHooks::CraftHook_Commit();
+	CraftHooks::GetCostliestEffectItemHook::CostliestEffect_Hook_Commit();
 
 	//Register callbacks and unique ID for serialization
 	g_serialization->SetUniqueID(g_pluginHandle, 'EGOC');
