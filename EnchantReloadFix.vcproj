@@ -303,6 +303,14 @@
 			</File>
 		</Filter>
 		<File
+			RelativePath=".\src\CraftHooks.cpp"
+			>
+		</File>
+		<File
+			RelativePath=".\src\CraftHooks.h"
+			>
+		</File>
+		<File
 			RelativePath="src\EnchantmentInfo.cpp"
 			>
 		</File>
