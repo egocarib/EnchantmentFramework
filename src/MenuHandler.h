@@ -47,16 +47,63 @@ public:
 
 typedef std::map <MagicItem::EffectItem*, Condition*>		ConditionedEffectMap;
 typedef std::map <EnchantmentItem*, ConditionedEffectMap>	EnchantmentConditionMap;
+typedef ConditionedEffectMap::iterator						CndEffectIter;
+typedef EnchantmentConditionMap::iterator					CndEnchantIter;
 
-class ConditionedWeaponEnchantments : public EnchantmentConditionMap
+class ConditionedWeaponEnchantments
 {
-  public:
-	bool Accept(EnchantmentItem* pEnch);
+private:
+	EnchantmentConditionMap		cMap;
+
+public:
+	bool HasIndexed(EnchantmentItem* e)  { return (cMap.find(e) != cMap.end()); }
+
+	Condition* GetCondition(Enchantment* e, MagicItem::EffectItem* ei)
+	{
+		if (cMap.find(e) == cMap.end())
+			return NULL;
+		if (cMap[e].find(ei) == cMap[e].end())
+			return NULL;
+
+		return cMap[e][ei];
+	}
+
+	bool Accept(EnchantmentItem* enchantment)
+	{
+		if (enchantment->data.deliveryType == 0x01) //Weapon enchantment (delivery type: 'contact')
+		{
+			ConditionedEffectMap conditionedEffects;
+			for (UInt32 i = 0; i < enchantment->effectItemList.count; ++i)
+			{
+				MagicItem::EffectItem* enchantEffect = NULL;
+				enchantment->effectItemList.GetNthItem(i, enchantEffect);
+				if (enchantEffect && enchantEffect->unk14) //(unk14 == condition)
+					conditionedEffects[enchantEffect] = reinterpret_cast<Condition*>(enchantEffect->unk14);
+			}
+			if (!conditionedEffects.empty())
+				cMap[enchantment] = conditionedEffects;
+		}
+		return true;
+	}
+
+	void Detach()
+	{
+		for (CndEnchantIter enchIt = cMap.begin(); enchIt != cMap.end(); enchIt++)
+			for(CndEffectIter effectIt = enchIt->second.begin(); effectIt != enchIt->second.end(); effectIt++)
+				effectIt->first->unk14 = NULL; //(unk14 == condition)
+	}
+
+	void Reattach()
+	{
+		for (CndEnchantIter enchIt = cMap.begin(); enchIt != cMap.end(); enchIt++)
+			for(CndEffectIter effectIt = enchIt->second.begin(); effectIt != enchIt->second.end(); effectIt++)
+				effectIt->first->unk14 = reinterpret_cast<UInt32>(effectIt->second);
+	}
 };
 
 
-typedef ConditionedWeaponEnchantments::iterator		CndEnchantIter;
-typedef ConditionedEffectMap::iterator				CndEffectIter;
+extern ConditionedWeaponEnchantments	g_weaponEnchantmentConditions;
+
 
 
 class MenuCore //Statics that don't need to change between loads in the same play session
@@ -66,7 +113,6 @@ public:
 
 	static LocalMenuHandler					thisMenu;
 	static BSFixedString					craftingMenu;
-	static ConditionedWeaponEnchantments	cWeaponEnchants;
 };
 
 

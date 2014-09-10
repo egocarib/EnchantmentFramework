@@ -4,35 +4,13 @@
 #include "skse/SafeWrite.h"
 #include "skse/Utilities.h"
 
-//#include "skse/GameObjects.h"
-
-EnchantmentCraftMonitor		g_craftData;
+EnchantCraftMonitor		g_craftData;
 
 
 
-
-
-EnchantmentItem* __stdcall CraftWeaponEnchantment(UInt32 type, tArray<MagicItem::EffectItem>* effectArray, EnchantmentItem* createdEnchantment/*, UInt32 type*/)
+EnchantmentItem* __stdcall CraftWeaponEnchantment(UInt32 type, tArray<MagicItem::EffectItem>* effectArray, EnchantmentItem* createdEnchantment)
 {
-	enum
-	{
-		kType_ArmorEnchantment,
-		kType_WeaponEnchantment
-	};
-
-	if (type == kType_WeaponEnchantment) _MESSAGE("-----------------------weapon enchantment-----------------------");
-	else if (type == kType_ArmorEnchantment) _MESSAGE("-----------------------armor enchantment-----------------------");
-
-	g_craftData.Commit(createdEnchantment);
-
-	// _MESSAGE("\nCreateEnchantment event for enchantment 0x%08X", createdEnchantment->formID);
-	// for (UInt32 n = 0; n < effectArray->count; n++)
-	// {
-	// 	MagicItem::EffectItem* effectItem = NULL;
-	// 	effectItem = &effectArray->arr.entries[n];
-	// 	_MESSAGE("    effect %u mgef  =  %s [%08X]", n, ((DYNAMIC_CAST(effectItem->mgef, EffectSetting, TESFullName))->name.data), effectItem->mgef->formID);
-	// }
-
+	g_craftData.Commit(createdEnchantment, type);
 	return createdEnchantment;
 }
 
@@ -70,7 +48,7 @@ __declspec(naked) void CreateEnchantment_Entry(void)
 				push		eax							// ...and push as first argument
 
 				call 		CraftWeaponEnchantment		// stdcall so we don't need to clean up
-				mov  		[esp + 0x20], eax 			// save result into placeholder, we no longer need the value that was there
+				mov  		[esp + 0x20], eax 			// save result into placeholder
 				popad									// (restore registers)
 
 				pop			eax							// pop result from placeholder
@@ -86,20 +64,16 @@ void CraftHook_Commit(void)
 }
 
 
-
-//(this works fine, just decided to use the approach above instead)
+//(older less comprehensive version of the above)
 	// class WeaponEnchantCraftHook
 	// {
 	// public:
 	// 	EnchantmentItem* CraftEvent_Hook(tArray<MagicItem::EffectItem>* effectArray)
 	// 	{
 	// 		EnchantmentItem* result = CALL_MEMBER_FN(this, CreateOffensiveEnchantment)(effectArray);
-
 	// 		//do stuff
-
 	// 		return result;
 	// 	}
-
 	// 	MEMBER_FN_PREFIX(WeaponEnchantCraftHook);
 	// 	DEFINE_MEMBER_FN(CreateOffensiveEnchantment, EnchantmentItem *, 0x00689D30, tArray<MagicItem::EffectItem> * effectArray);
 
@@ -109,7 +83,6 @@ void CraftHook_Commit(void)
 	// 		WriteRelCall(0x00851BF0 + 0x23C, GetFnAddr(&WeaponEnchantCraftHook::CraftEvent_Hook));
 	// 		WriteRelCall(0x00852DF6, GetFnAddr(&WeaponEnchantCraftHook::CraftEvent_Hook));
 	// 	}
-
 	// };
 
 
@@ -117,13 +90,8 @@ MagicItem::EffectItem* GetCostliestEffectItemHook::CostliestEffect_Hook(UInt32 a
 {
 	EffectItem* result = CALL_MEMBER_FN(this, GetCostliestEffectItem)(arg1, arg2); //Member Fn of MagicItem
 
-	// _MESSAGE("\nCostliestEffect Event");
-
 	MagicItem* magicItem = ((MagicItem*)this);
 	EnchantmentItem* enchantment = DYNAMIC_CAST(magicItem, MagicItem, EnchantmentItem);
-	// if (enchantment)
-	// 	_MESSAGE("    thisEnchantment = %08X [%s]", enchantment->formID, (DYNAMIC_CAST(enchantment, EnchantmentItem, TESFullName))->name.data);
-
 	g_craftData.Push(enchantment); //Queue parent enchantments that are being combined to craft this new enchantment
 
 	return result;

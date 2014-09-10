@@ -12,8 +12,9 @@
 #define INVALIDATE true
 
 
-typedef std::vector<EffectSetting*> 		MagEffVec;
-typedef std::vector<MagicItem::EffectItem*> EffectItemVec;
+typedef std::vector<EffectSetting*> 						MagEffVec;
+typedef std::vector<MagicItem::EffectItem*> 				EffectItemVec;
+typedef std::vector <EnchantmentItem*>						EnchantmentVec;
 
 
 class EnchantmentInfoEntry
@@ -47,28 +48,37 @@ public:
 	ParentForms			parentForms;
 
 
-	void EvaluateConditions() //TODO - this wont work currently since conditions are detached while in the enchanting menu. need to queue these or read from saved data.
+	void EvaluateConditions()
 	{
 		//Inherit conditions from parent enchantments
 		EnchantmentItem* thisEnchant = DYNAMIC_CAST(LookupFormByID(formID), TESForm, EnchantmentItem);
 		for (UInt32 enchantNum = 0, effectNum = 0; enchantNum < parentForms.data.size(); enchantNum++)
 		{
 			EnchantmentItem* parentEnchant = DYNAMIC_CAST(LookupFormByID(parentForms.data[enchantNum]), TESForm, EnchantmentItem);
-			for (UInt32 i = 0; i < parentEnchant->effectItemList.count; i++)
+
+			if (!g_weaponEnchantmentConditions.HasIndexed(parentEnchant))
 			{
-				MagicItem::EffectItem* parentEffectItem = NULL;
-				parentEnchant->effectItemList.GetNthItem(i, parentEffectItem);
-				if (parentEffectItem && parentEffectItem->unk14) //(unk14 == condition)
+				effectNum += parentEnchant->effectItemList.count;
+				continue;
+			}
+			else
+			{
+				attributes.hasConditions = true;
+				for (UInt32 i = 0; i < parentEnchant->effectItemList.count; i++)
 				{
-					attributes.hasConditions = true;
-					MagicItem::EffectItem* pNew = NULL;
-					thisEnchant->effectItemList.GetNthItem(effectNum, pNew);
-					pNew->unk14 = parentEffectItem->unk14;
-					// (weirdly enough, unlike the serialization load method, this
-					//  doesn't cause any problems... I can reload the game many
-					//  times and the condition stays valid and doesn't cause a crash)
+					MagicItem::EffectItem* parentEffectItem = NULL;
+					parentEnchant->effectItemList.GetNthItem(i, parentEffectItem);
+					if (parentEffectItem)
+					{
+						MagicItem::EffectItem* pNew = NULL;
+						thisEnchant->effectItemList.GetNthItem(effectNum, pNew);
+						pNew->unk14 = g_weaponEnchantmentConditions.GetCondition(parentEnchant, parentEffectItem);
+						// (weirdly enough, unlike the serialization load method, this
+						//  doesn't cause any problems... I can reload the game many
+						//  times and the condition stays valid and doesn't cause a crash)
+					}
+					effectNum++; //total effect counter for this entire custom enchantment
 				}
-				effectNum++; //total effect counter for this entire custom enchantment
 			}
 		}
 	}
@@ -133,62 +143,35 @@ public:
 };
 
 
-typedef std::vector <EnchantmentItem*>						EnchantmentVec;
 typedef std::map <EnchantmentItem*, EnchantmentInfoEntry>	EnchantmentInfoMap;
-//typedef std::vector <EnchantmentInfoMap::iterator>			EnchantmentInfoReferenceVec;
 
 
-// class KnownBaseEnchantments
-// {
-// public:
-// 	bool Accept(EnchantmentItem* pEnch)
-// 	{
-// 		TESForm* pForm = DYNAMIC_CAST(pEnch, EnchantmentItem, TESForm);
-// 		if (pForm && ((pForm->flags & TESForm::kFlagPlayerKnows) == TESForm::kFlagPlayerKnows))
-// 		{
-// 			if (pEnch->data.deliveryType == 0x01) //Delivery type: 'contact'
-// 				knownWeaponBaseEnchantments.push_back(pEnch);
-// 			else if (pEnch->data.deliveryType == 0x00) //Delivery type: 'self'
-// 				knownArmorBaseEnchantments.push_back(pEnch);
-// 		}
-// 		return true;
-// 	}
-
-// 	//Find known base enchantment from targetName:
-// 	EnchantmentItem* LookupByName(const char* targetName, char hint = 'w');
-// 	//Clear vectors:
-// 	void Reset();
-
-// 	EnchantmentVec knownWeaponBaseEnchantments;
-// 	EnchantmentVec knownArmorBaseEnchantments;
-
-// 	typedef std::map<const char*, EnchantmentItem*> NamedEnchantMap;
-// 	static NamedEnchantMap discoveredEnchantments;
-// };
 
 
 class PersistentWeaponEnchantments
 {
 private:
-	EnchantmentInfoMap			playerWeaponEnchants;
-	static bool bInitialized;
+	EnchantmentInfoMap	playerWeaponEnchants;
 
 public:
+	void Reset() { playerWeaponEnchants.clear(); } //Reset info for new game or new save load
+
+	void Push(EnchantmentItem* enchantment, EnchantmentInfoEntry &info) //Rebuild map during load
+	{
+		playerWeaponEnchants[enchantment] = info;
+	}
+
+	void PostCraftUpdate(); //Fixes new crafted enchantments and adds them to the tracker
+
+	bool IsChaosDamageEffect(EffectSetting* mgef); //Secondary enchantment effects don't scale with slider
+	void FixIfChaosDamage(EnchantmentItem* pEnch); //(should try to fix this for all enchantments eventually)
+
 	template <typename SerializeInterface_T>
 	void Serialize(SerializeInterface_T* const intfc)
 	{
 		for (EnchantmentInfoMap::iterator it = playerWeaponEnchants.begin(); it != playerWeaponEnchants.end(); ++it)
 			it->second.Serialize(intfc);
 	}
-	void Add(EnchantmentItem* enchantment, EnchantmentInfoEntry &info)
-	{	//used during serialization load
-		playerWeaponEnchants[enchantment] = info; //Add to main tracker
-	}
-	UInt32 GetSize() { return playerWeaponEnchants.size(); }
-	// static KnownBaseEnchantments* GetKnown(const bool &invalidate = false); //Get all base enchantments currently known by the player
-	void PostCraftUpdate(); //Fixes any new custom enchantments crafted at the enchantment table & vectorizes an iterator to each new enchantment
-	void Reset(); //Reset info for new game or new save load
-
 };
 
 
@@ -214,10 +197,5 @@ private:
 };
 
 
-EnchantmentItem* FindBaseEnchantment(MagEffVec mgefs, UInt32 deliveryType);
-
-bool IsChaosDamageEffect(EffectSetting* mgef);
-
-void FixIfChaosDamage(EnchantmentItem* pEnch);
 
 extern PersistentWeaponEnchantments		enchantTracker;

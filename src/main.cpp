@@ -78,7 +78,7 @@ UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc, UInt32* const length)
 		// 	}
 		// }
 
-		enchantTracker.Add(thisEnchant, thisEntry); //Add to main tracker
+		enchantTracker.Push(thisEnchant, thisEntry); //Add to main tracker
 		return 1;
 	}
 	else
@@ -139,7 +139,7 @@ void InitialLoadSetup()
 	_MESSAGE("Building Event Sinks...");
 
 	//Add event sinks
-	g_trackedStatsEventDispatcher->AddEventSink(&g_trackedStatsEventHandler);
+	// g_trackedStatsEventDispatcher->AddEventSink(&g_trackedStatsEventHandler);
 
 }
 

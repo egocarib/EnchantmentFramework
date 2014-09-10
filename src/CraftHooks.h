@@ -3,20 +3,22 @@
 #include <queue>
 
 
-
-
-
-
-
-class EnchantmentCraftMonitor
+class EnchantCraftMonitor
 {
 private:
 	EnchantmentItem*				stagedNewEnchantment;
+	UInt32							stagedNewEnchantmentType;
 	std::queue<EnchantmentItem*>	stagedBaseEnchantments;
 	bool 							isCommitted;
 
 public:
-	EnchantmentCraftMonitor() : stagedNewEnchantment(NULL), stagedBaseEnchantments(), isCommitted(false) {}
+	enum
+	{
+		kEnchantmentType_Armor,
+		kEnchantmentType_Weapon
+	};
+
+	EnchantCraftMonitor() : stagedNewEnchantment(NULL), stagedBaseEnchantments(), isCommitted(false) {}
 
 	void Push(EnchantmentItem* enchantment)
 	{
@@ -30,16 +32,17 @@ public:
 
 	EnchantmentItem* Pop()
 	{
-		if (stagedBaseEnchantments.empty()/* || isCommitted*/)
+		if (stagedBaseEnchantments.empty())
 			return NULL;
 		EnchantmentItem* enchantment = stagedBaseEnchantments.front();
 		stagedBaseEnchantments.pop();
 		return enchantment;
 	}
 
-	void Commit(EnchantmentItem* enchantment)
+	void Commit(EnchantmentItem* enchantment, UInt32 type)
 	{
 		stagedNewEnchantment = enchantment;
+		stagedNewEnchantmentType = type;
 		isCommitted = true;
 	}
 
@@ -53,15 +56,7 @@ public:
 				break;
 		stagedNewEnchantment = NULL;
 	}
-
 };
-
-
-extern	EnchantmentCraftMonitor		g_craftData;
-
-void CraftHook_Commit(void);
-
-
 
 
 class GetCostliestEffectItemHook : public MagicItem
@@ -70,3 +65,8 @@ public:
 	MagicItem::EffectItem* CostliestEffect_Hook(UInt32 arg1, bool arg2);
 	static void CostliestEffect_Hook_Commit(void);
 };
+
+
+extern	EnchantCraftMonitor		g_craftData;
+
+void CraftHook_Commit(void);

@@ -5,49 +5,8 @@
 
 
 
-// KnownBaseEnchantments::NamedEnchantMap KnownBaseEnchantments::discoveredEnchantments;
 
-// EnchantmentItem* KnownBaseEnchantments::LookupByName(const char* targetName, char hint) //'w' for weapon, 'a' for armor
-// {
-// 	if (discoveredEnchantments.count(targetName) > 0)
-// 		return discoveredEnchantments[targetName];
-
-// 	if (hint != 'a')
-// 		for (EnchantmentVec::iterator it = knownWeaponBaseEnchantments.begin(); it != knownWeaponBaseEnchantments.end(); ++it)
-// 			if (strcmp(targetName, (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data) == 0)
-// 				return discoveredEnchantments[targetName] = (*it);
-
-// 	for (EnchantmentVec::iterator it = knownArmorBaseEnchantments.begin(); it != knownArmorBaseEnchantments.end(); ++it)
-// 		if (strcmp(targetName, (DYNAMIC_CAST((*it), EnchantmentItem, TESFullName))->name.data) == 0)
-// 			return discoveredEnchantments[targetName] = (*it);
-
-// 	return NULL;
-// }
-
-// void KnownBaseEnchantments::Reset()
-// {
-// 	knownWeaponBaseEnchantments.clear();
-// 	knownArmorBaseEnchantments.clear();
-// }
-
-
-// bool PersistentWeaponEnchantments::bInitialized = false;
-
-// KnownBaseEnchantments* PersistentWeaponEnchantments::GetKnown(const bool &invalidate)
-// {
-// 	static KnownBaseEnchantments known;
-// 	if (invalidate || !bInitialized)
-// 	{
-// 		bInitialized = true;
-// 		known.Reset();
-// 		EnchantmentDataHandler::Visit(&known);
-// 	}
-// 	return &known;
-// }
-
-bool PersistentWeaponEnchantments::bInitialized = false;
-
-//Only call this right after leaving the enchanting table
+//Called each time an item is crafted at the enchanting table
 void PersistentWeaponEnchantments::PostCraftUpdate()
 {
 	EnchantmentItem* newEnchantment = g_craftData.GetStagedNewEnchantment();
@@ -73,43 +32,8 @@ void PersistentWeaponEnchantments::PostCraftUpdate()
 	playerWeaponEnchants[newEnchantment] = thisEnchantmentInfo; //Update array of all player enchantments
 }
 
-void PersistentWeaponEnchantments::Reset()
-{
-	playerWeaponEnchants.clear();
-	bInitialized = false;
-}
 
-
-// EnchantmentItem* FindBaseEnchantment(MagEffVec mgefs, UInt32 deliveryType) //Base enchantment data is not stored on player-crafted enchantments
-// {
-// 	//Locate known base enchantment with matching effect list
-// 	EnchantmentVec* known = NULL;
-// 	if (deliveryType == 0x01) //Weapon enchantment (delivery type: 'contact')
-// 		known = &PersistentWeaponEnchantments::GetKnown()->knownWeaponBaseEnchantments;
-// 	else if (deliveryType == 0x00) //Armor enchantment (delivery type: 'self')
-// 		known = &PersistentWeaponEnchantments::GetKnown()->knownArmorBaseEnchantments;
-
-// 	for (EnchantmentVec::iterator baseEnchIt = known->begin(); baseEnchIt != known->end(); ++baseEnchIt)
-// 	{
-// 		if ((*baseEnchIt)->effectItemList.count != mgefs.size()) //Compare effect list length
-// 			continue;
-// 		for (MagEffVec::iterator mgefIt = mgefs.begin(); mgefIt != mgefs.end(); ++mgefIt)
-// 		{
-// 			MagicItem::EffectItem* pBaseEnchEffectItem = NULL;
-// 			EffectSetting* pBaseEnchMGEF = NULL;
-// 			(*baseEnchIt)->effectItemList.GetNthItem(mgefIt - mgefs.begin(), pBaseEnchEffectItem);
-// 			pBaseEnchMGEF = pBaseEnchEffectItem->mgef;
-// 			if (pBaseEnchMGEF ? pBaseEnchMGEF != *mgefIt : true)
-// 				break;
-// 			if (mgefIt == (mgefs.end() - 1)) //Confirmed match
-// 				return (*baseEnchIt);
-// 		}
-// 	}
-// 	return NULL;
-// }
-
-
-bool IsChaosDamageEffect(EffectSetting* mgef)
+bool PersistentWeaponEnchantments::IsChaosDamageEffect(EffectSetting* mgef)
 {
 	static DataHandler* data = DataHandler::GetSingleton();
 	static const char * dragonborn = "Dragonborn.esm";
@@ -117,7 +41,7 @@ bool IsChaosDamageEffect(EffectSetting* mgef)
 	return (mgef) ? (mgef->formID >= lowBoundFormID) && (mgef->formID <= (lowBoundFormID + 0x02)) : false;
 }
 
-void FixIfChaosDamage(EnchantmentItem* pEnch) //Detect Chaos Damage and fix its non-scaling effects
+void PersistentWeaponEnchantments::FixIfChaosDamage(EnchantmentItem* pEnch) //Detect Chaos Damage and fix its non-scaling effects
 {
 	if (!pEnch || (pEnch->effectItemList.count < 3))
 		return;
