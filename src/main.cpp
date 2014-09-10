@@ -52,8 +52,8 @@ UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc, UInt32* const length)
 		if (!thisEnchant)
 			return 0;
 
-		thisEnchant->data.calculations.flags |= thisEntry.data.flags; //Set to manual calc
-		thisEnchant->data.calculations.cost = thisEntry.data.enchantmentCost; //Correct enchantment cost
+		thisEnchant->data.calculations.flags |= thisEntry.attributes.flags; //Set to manual calc
+		thisEnchant->data.calculations.cost = thisEntry.attributes.enchantmentCost; //Correct enchantment cost
 		
 		//This ended up causing a crash on subsequent loads, most likely because the game rebuilds the condition table.
 		//I could probably work around it by detaching all conditions during Revert, and then letting the Load process
@@ -209,9 +209,9 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 
 bool SKSEPlugin_Load(const SKSEInterface * skse)
 {
-	//CraftHooks::WeaponEnchantCraftHook::CraftHook_Commit();
-	CraftHooks::CraftHook_Commit();
-	CraftHooks::GetCostliestEffectItemHook::CostliestEffect_Hook_Commit();
+	//WeaponEnchantCraftHook::CraftHook_Commit();
+	CraftHook_Commit();
+	GetCostliestEffectItemHook::CostliestEffect_Hook_Commit();
 
 	//Register callbacks and unique ID for serialization
 	g_serialization->SetUniqueID(g_pluginHandle, 'EGOC');
