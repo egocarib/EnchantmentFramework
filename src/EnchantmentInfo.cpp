@@ -1,22 +1,59 @@
 #include "EnchantmentInfo.h"
+#include "MenuHandler.h"
 #include "CraftHooks.h"
-#include "skse/GameData.h"
-#include "skse/GameObjects.h"
+#include "skse/GameRTTI.h"
 
 
+PersistentWeaponEnchantments	g_enchantTracker;
 
 
-//Called each time an item is crafted at the enchanting table
+void EnchantmentInfoEntry::EvaluateConditions()
+{
+	//Inherit conditions from parent enchantments
+	EnchantmentItem* thisEnchant = DYNAMIC_CAST(LookupFormByID(formID), TESForm, EnchantmentItem);
+	for (UInt32 enchantNum = 0, effectNum = 0; enchantNum < parentForms.data.size(); enchantNum++)
+	{
+		EnchantmentItem* parentEnchant = DYNAMIC_CAST(LookupFormByID(parentForms.data[enchantNum]), TESForm, EnchantmentItem);
+
+		if (!g_weaponEnchantmentConditions.HasIndexed(parentEnchant))
+		{
+			effectNum += parentEnchant->effectItemList.count;
+			continue;
+		}
+		else //Parent has conditions
+		{
+			attributes.hasConditions = true;
+			for (UInt32 i = 0; i < parentEnchant->effectItemList.count; i++)
+			{
+				MagicItem::EffectItem* parentEffectItem = NULL;
+				parentEnchant->effectItemList.GetNthItem(i, parentEffectItem);
+				if (parentEffectItem)
+				{
+					MagicItem::EffectItem* pNew = NULL;
+					thisEnchant->effectItemList.GetNthItem(effectNum, pNew);
+					pNew->unk14 = reinterpret_cast<UInt32>(g_weaponEnchantmentConditions.GetCondition(parentEnchant, parentEffectItem));
+					// (weirdly enough, unlike the serialization load method, this
+					//  doesn't cause any problems... I can reload the game many
+					//  times and the condition stays valid and doesn't cause a crash)
+				}
+				effectNum++; //total effect counter for this entire custom enchantment
+			}
+		}
+	}
+}
+
+
 void PersistentWeaponEnchantments::PostCraftUpdate()
 {
-	EnchantmentItem* newEnchantment = g_craftData.GetStagedNewEnchantment();
+	//armor enchantments not supported at the moment (no real need to support them)
+	if (g_craftData.GetStagedNewEnchantmentType() == EnchantCraftMonitor::kEnchantmentType_Armor)
+		return;
+
+	EnchantmentItem* newEnchantment = g_craftData.GetStagedNewEnchantment(); //Enchantment that was just created
 	if (!newEnchantment)
 		return;
-	else if (!(newEnchantment->data.calculations.flags & EnchantmentInfoEntry::kFlag_ManualCalc))
-		return;	//Ignore Auto-Calc enchants (they are created before this plugin or via papyrus CreateEnchantment)
-				//(enchants are set to manual calc when crafted until game reload, then they revert to auto without this plugin's presence)
-	else if (playerWeaponEnchants.find(newEnchantment) != playerWeaponEnchants.end())
-		return; //Already added to map
+	else if (playerWeaponEnchants.find(newEnchantment) != playerWeaponEnchants.end()) //Ignore duplicates
+		return;
 
 	FixIfChaosDamage(newEnchantment);
 
@@ -67,17 +104,5 @@ void PersistentWeaponEnchantments::FixIfChaosDamage(EnchantmentItem* pEnch) //De
 	else if (effects[1]->magnitude == effects[2]->magnitude)
 		effects[1]->magnitude = effects[2]->magnitude = effects[0]->magnitude;
 
-	//Update new effect costs
-		// float newEnchantmentCost = 0.0;
-		// for (UInt32 i = 0; i < 3; ++i)
-		// {
-		// 	float thisCost = effects[i]->mgef->properties.baseCost * pow((effects[i]->magnitude * effects[i]->duration / 10.0), 1.1);
-		// 	effects[i]->cost = thisCost;
-		// 	newEnchantmentCost += thisCost;
-		// }
-
-		//Although updating the cost would be technically correct, it also throws off the price of the enchanted item
-		//compared to what was displayed at the enchanting table, which seems to go against the spirit of this patch.
-
-		// pEnch->data.calculations.cost = (UInt32)newEnchantmentCost;
+	//See early commits for formula to update enchant cost too, now removed
 }

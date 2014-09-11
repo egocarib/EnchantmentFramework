@@ -1,20 +1,16 @@
 #pragma once
 
+#include "[PluginLibrary]/SerializeForm.h"
 #include "skse/GameData.h"
-#include "skse/GameForms.h"
 #include "skse/GameObjects.h"
-#include "skse/GameRTTI.h"
 #include <vector>
 #include <map>
 
-#include "[PluginLibrary]/SerializeForm.h"
-
-#define INVALIDATE true
 
 
 typedef std::vector<EffectSetting*> 						MagEffVec;
 typedef std::vector<MagicItem::EffectItem*> 				EffectItemVec;
-typedef std::vector <EnchantmentItem*>						EnchantmentVec;
+typedef std::vector<EnchantmentItem*>						EnchantmentVec;
 
 
 class EnchantmentInfoEntry
@@ -42,46 +38,14 @@ public:
 	};
 
 
-	//Members
+	//Members -----------------------
 	UInt32				formID;
 	Attributes			attributes;
 	ParentForms			parentForms;
+	//-------------------------------
 
 
-	void EvaluateConditions()
-	{
-		//Inherit conditions from parent enchantments
-		EnchantmentItem* thisEnchant = DYNAMIC_CAST(LookupFormByID(formID), TESForm, EnchantmentItem);
-		for (UInt32 enchantNum = 0, effectNum = 0; enchantNum < parentForms.data.size(); enchantNum++)
-		{
-			EnchantmentItem* parentEnchant = DYNAMIC_CAST(LookupFormByID(parentForms.data[enchantNum]), TESForm, EnchantmentItem);
-
-			if (!g_weaponEnchantmentConditions.HasIndexed(parentEnchant))
-			{
-				effectNum += parentEnchant->effectItemList.count;
-				continue;
-			}
-			else
-			{
-				attributes.hasConditions = true;
-				for (UInt32 i = 0; i < parentEnchant->effectItemList.count; i++)
-				{
-					MagicItem::EffectItem* parentEffectItem = NULL;
-					parentEnchant->effectItemList.GetNthItem(i, parentEffectItem);
-					if (parentEffectItem)
-					{
-						MagicItem::EffectItem* pNew = NULL;
-						thisEnchant->effectItemList.GetNthItem(effectNum, pNew);
-						pNew->unk14 = g_weaponEnchantmentConditions.GetCondition(parentEnchant, parentEffectItem);
-						// (weirdly enough, unlike the serialization load method, this
-						//  doesn't cause any problems... I can reload the game many
-						//  times and the condition stays valid and doesn't cause a crash)
-					}
-					effectNum++; //total effect counter for this entire custom enchantment
-				}
-			}
-		}
-	}
+	void EvaluateConditions(); //Inherit conditions from parent enchantments
 
 	template <typename SerializeInterface_T>
 	void Serialize(SerializeInterface_T* const intfc)
@@ -145,9 +109,6 @@ public:
 
 typedef std::map <EnchantmentItem*, EnchantmentInfoEntry>	EnchantmentInfoMap;
 
-
-
-
 class PersistentWeaponEnchantments
 {
 private:
@@ -174,6 +135,8 @@ public:
 	}
 };
 
+extern PersistentWeaponEnchantments		g_enchantTracker;
+
 
 class EnchantmentDataHandler //Exposes list of all loaded enchantment forms
 {
@@ -195,7 +158,3 @@ public:
 private:
 	EnchantmentDataHandler() {}
 };
-
-
-
-extern PersistentWeaponEnchantments		enchantTracker;
