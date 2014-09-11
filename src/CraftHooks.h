@@ -1,6 +1,10 @@
-#include "skse/GameForms.h"
+#pragma once
+
 #include "skse/GameObjects.h"
 #include <queue>
+
+class EnchantmentItem;
+class MagicItem;
 
 
 class EnchantCraftMonitor
@@ -47,6 +51,7 @@ public:
 	}
 
 	EnchantmentItem* GetStagedNewEnchantment() { return stagedNewEnchantment; }
+	UInt32 GetStagedNewEnchantmentType() { return stagedNewEnchantmentType; }
 
 	template <class Visitor>
 	void Visit(Visitor* visitor)
@@ -63,10 +68,10 @@ class GetCostliestEffectItemHook : public MagicItem
 {
 public:
 	MagicItem::EffectItem* CostliestEffect_Hook(UInt32 arg1, bool arg2);
-	static void CostliestEffect_Hook_Commit(void);
+	static void Hook_Commit(void);
 };
 
 
 extern	EnchantCraftMonitor		g_craftData;
 
-void CraftHook_Commit(void);
+void CreateEnchantmentHook_Commit(void);

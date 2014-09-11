@@ -7,10 +7,15 @@
 EnchantCraftMonitor		g_craftData;
 
 
-
-EnchantmentItem* __stdcall CraftWeaponEnchantment(UInt32 type, tArray<MagicItem::EffectItem>* effectArray, EnchantmentItem* createdEnchantment)
+EnchantmentItem* __stdcall CraftWeaponEnchantment(tArray<MagicItem::EffectItem>* effectArray, EnchantmentItem* createdEnchantment)
 {
-	g_craftData.Commit(createdEnchantment, type);
+	g_craftData.Commit(createdEnchantment, EnchantCraftMonitor::kEnchantmentType_Weapon);
+	return createdEnchantment;
+}
+
+EnchantmentItem* __stdcall CraftArmorEnchantment(tArray<MagicItem::EffectItem>* effectArray, EnchantmentItem* createdEnchantment)
+{
+	g_craftData.Commit(createdEnchantment, EnchantCraftMonitor::kEnchantmentType_Armor);
 	return createdEnchantment;
 }
 
@@ -22,34 +27,22 @@ static const UInt32 kCreateArmorEnchantment_Hook_Enter		= kCreateArmorEnchantmen
 static const UInt32 kCreateArmorEnchantment_Hook_Return		= kCreateArmorEnchantment_Hook_Base + 0x28;
 static const UInt32 kCreateEnchantment_Core					= 0x006899C0; //this is what actually does the work
 
-__declspec(naked) void CreateEnchantment_Entry(void)
+__declspec(naked) void CreateWeaponEnchantment_Entry(void)
 {
 		__asm
 		{
-				sub			esp, 4						//shift 4 args on the stack down to reserve placeholder		(esp + 0x04)
-				mov			[esp], edi
-				mov			edi, [esp + 8]
-				mov			[esp + 4], edi
-				mov			edi, [esp + 0xC]
-				mov			[esp + 8], edi
-				mov			edi, [esp + 0x10]			//final shift leaves copy of arg in placeholder @ esp+0x10 [0 = armorEnch, 1 = weaponEnch]
-				mov			[esp + 0xC], edi
-				mov			edi, [esp]					//restore edi now that shift is complete
-
 				call		[kCreateEnchantment_Core]	// (returns EnchantmentItem*)
-				add			esp, 0x10					// cdecl call, do manual cleanup (esp now points to our saved arg)
+				add			esp, 0x10					// cdecl call, do manual cleanup
 
-				pushad									// (save registers to stack)								(esp + 0x20)
-				push		eax							// push result from the previous call as third argument		(esp + 0x04)
-				mov			eax, [esp + 0x30 + 0x04]	// get original parameter back from stack...  [orig. 0x04 offset + 2 local vars + 0x28]
-				push		eax							// ...and push as second argument
+				sub			esp, 4						// shift stack pointer down to reserve a placeholder		sub 0x04
 
-				mov			eax, [esp + 0x28]			// get the arg we saved above when shifting the stack down...
+				pushad									// (save registers to stack)								sub 0x20
+				push		eax							// push result from the previous call as second argument	sub 0x04
+				mov			eax, [esp + 0x30 + 0x04]	// get original param back from stack...   [orig offset 0x4] + [0x28 + 0x8 local vars]
 				push		eax							// ...and push as first argument
-
-				call 		CraftWeaponEnchantment		// stdcall so we don't need to clean up
+				call 		CraftWeaponEnchantment		// stdcall so we don't need to do work
 				mov  		[esp + 0x20], eax 			// save result into placeholder
-				popad									// (restore registers)
+				popad									// (restore registers [shifts esp back up 0x20])
 
 				pop			eax							// pop result from placeholder
 
@@ -57,14 +50,37 @@ __declspec(naked) void CreateEnchantment_Entry(void)
 		}
 }
 
-void CraftHook_Commit(void)
+__declspec(naked) void CreateArmorEnchantment_Entry(void)
 {
-	WriteRelJump(kCreateWeaponEnchantment_Hook_Enter, (UInt32)CreateEnchantment_Entry);
-	WriteRelJump(kCreateArmorEnchantment_Hook_Enter, (UInt32)CreateEnchantment_Entry);
+		__asm
+		{
+				call		[kCreateEnchantment_Core]	// (returns EnchantmentItem*)
+				add			esp, 0x10					// cdecl call, do manual cleanup
+
+				sub			esp, 4						// shift stack pointer down to reserve a placeholder		sub 0x04
+
+				pushad									// (save registers to stack)								sub 0x20
+				push		eax							// push result from the previous call as second argument	sub 0x04
+				mov			eax, [esp + 0x30 + 0x04]	// get original param back from stack...   [orig offset 0x4] + [0x28 + 0x8 local vars]
+				push		eax							// ...and push as first argument
+				call 		CraftArmorEnchantment		// stdcall so we don't need to do work
+				mov  		[esp + 0x20], eax 			// save result into placeholder
+				popad									// (restore registers [shifts esp back up 0x20])
+
+				pop			eax							// pop result from placeholder
+
+				jmp  		[kCreateArmorEnchantment_Hook_Return]
+		}
+}
+
+void CreateEnchantmentHook_Commit(void)
+{
+	WriteRelJump(kCreateWeaponEnchantment_Hook_Enter, (UInt32)CreateWeaponEnchantment_Entry);
+	WriteRelJump(kCreateArmorEnchantment_Hook_Enter, (UInt32)CreateArmorEnchantment_Entry);
 }
 
 
-//(older less comprehensive version of the above)
+//(older version of the above)
 	// class WeaponEnchantCraftHook
 	// {
 	// public:
@@ -97,7 +113,7 @@ MagicItem::EffectItem* GetCostliestEffectItemHook::CostliestEffect_Hook(UInt32 a
 	return result;
 }
 
-void GetCostliestEffectItemHook::CostliestEffect_Hook_Commit(void)
+void GetCostliestEffectItemHook::Hook_Commit(void)
 {
 	WriteRelCall(0x00851DEB, GetFnAddr(&GetCostliestEffectItemHook::CostliestEffect_Hook));
 }
