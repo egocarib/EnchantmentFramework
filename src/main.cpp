@@ -3,38 +3,51 @@
 #include "skse/GameRTTI.h"
 #include "EnchantmentInfo.h"
 #include "MenuHandler.h"
+#include "CraftHooks.h"
 #include "EnchantmentDataPluginInterface.h"
 #include "[PluginLibrary]/SerializeForm.h"
-#include "CraftHooks.h"
 #include <shlobj.h>
 
-IDebugLog						gLog;
+IDebugLog						g_Log;
 const char*						kLogPath = "\\My Games\\Skyrim\\Logs\\EnchantReloadFix.log";
 
 PluginHandle					g_pluginHandle = kPluginHandle_Invalid;
 SKSESerializationInterface*		g_serialization = NULL;
 SKSEMessagingInterface*			g_messageInterface = NULL;
-const UInt32 					kSerializationDataVersion = 1;
+const UInt32 					kSerializationDataVersion = 2;
 
-MenuCore						menu;
-PersistentWeaponEnchantments	enchantTracker;
+
+
+void PreLoadSetup()
+{
+	_MESSAGE("Building event sinks...");
+	MenuManager::GetSingleton()->MenuOpenCloseEventDispatcher()->AddEventSink(&g_menuEventHandler);
+}
+
+void PostLoadSetup()
+{
+	static bool firstLoad = true;
+	if (firstLoad)
+	{
+		firstLoad = false;
+		_MESSAGE("First load, initializating...");
+		EnchantmentDataHandler::Visit(&g_weaponEnchantmentConditions);
+	}
+}
 
 
 void Serialization_Revert(SKSESerializationInterface * intfc)
 {
-	_MESSAGE("Initializing...");
-	menu.InitializeMenuMonitor();
-	enchantTracker.Reset();
+	g_enchantTracker.Reset();
 }
 
 
 void Serialization_Save(SKSESerializationInterface * intfc)
 {
 	_MESSAGE("Saving...");
-	menu.InitializeMenuMonitor(); //Init Menu here too, for now, because New Game doesn't trigger Revert or Load.
-
+	PostLoadSetup(); //necessary if the player starts a new game after initial load, no other message/serialization events will occur until the first autosave
 	if(intfc->OpenRecord('DATA', kSerializationDataVersion))
-		enchantTracker.Serialize(intfc);
+		g_enchantTracker.Serialize(intfc);
 }
 
 
@@ -43,6 +56,7 @@ UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc, UInt32* const length)
 	EnchantmentInfoEntry thisEntry;
 	UInt32 sizeRead;
 	UInt32 sizeExpected;
+
 	thisEntry.Deserialize(intfc, &sizeRead, &sizeExpected);
 	(*length) -= sizeRead;
 
@@ -54,36 +68,13 @@ UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc, UInt32* const length)
 
 		thisEnchant->data.calculations.flags |= thisEntry.attributes.flags; //Set to manual calc
 		thisEnchant->data.calculations.cost = thisEntry.attributes.enchantmentCost; //Correct enchantment cost
-		
-		//This ended up causing a crash on subsequent loads, most likely because the game rebuilds the condition table.
-		//I could probably work around it by detaching all conditions during Revert, and then letting the Load process
-		//re-attach them. But I'm just going to disable them for now to be safe, it's relatively unimportant.
 
-		// if (thisEntry.cData.hasConditions) //Update enchantment conditions
-		// {
-		// 	EnchantmentItem* parentEnchant = DYNAMIC_CAST(LookupFormByID(thisEntry.cData.parentFormID), TESForm, EnchantmentItem);
-		// 	if (parentEnchant)
-		// 	{
-		// 		for (UInt32 i = 0; (i < parentEnchant->effectItemList.count) && (i < thisEnchant->effectItemList.count); ++i)
-		// 		{
-		// 			MagicItem::EffectItem* parentEffect = NULL;
-		// 			parentEnchant->effectItemList.GetNthItem(i, parentEffect);
-		// 			if (parentEffect && parentEffect->condition)
-		// 			{
-		// 				MagicItem::EffectItem* childEffect = NULL;
-		// 				thisEnchant->effectItemList.GetNthItem(i, childEffect);
-		// 				childEffect->condition = parentEffect->condition;
-		// 			}
-		// 		}
-		// 	}
-		// }
-
-		enchantTracker.Push(thisEnchant, thisEntry); //Add to main tracker
+		g_enchantTracker.Push(thisEnchant, thisEntry); //Add to main tracker
 		return 1;
 	}
 	else
 	{
-		_MESSAGE("Error Reading From Cosave: INVALID CHUNK SIZE (%u Expected %u)"
+		_MESSAGE("Error Reading Cosave: Invalid Chunk Size (%u Expected %u)"
 		" -- Data Entry Will Be Skipped [form 0x%08X]", sizeRead, sizeExpected, thisEntry.formID);
 		return 0;
 	}
@@ -92,8 +83,7 @@ UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc, UInt32* const length)
 
 void Serialization_Load(SKSESerializationInterface* intfc)
 {
-	menu.InitializeMenuMonitor();
-	enchantTracker.Reset();
+	g_enchantTracker.Reset();
 	_MESSAGE("Loading...");
 
 	UInt32	type;
@@ -104,26 +94,16 @@ void Serialization_Load(SKSESerializationInterface* intfc)
 
 	while(!error && intfc->GetNextRecordInfo(&type, &version, &length))
 	{
-		switch(type)
+		if (type == 'DATA')
 		{
-			case 'DATA':
-			{
-				if(version == kSerializationDataVersion)
-					while ((SInt32)length > 0) //Safety cast
-						recordsRead += ProcessLoadEntry(intfc, &length);
-				else
-				{
-					_MESSAGE("Error Reading From Cosave: UNKNOWN DATA VERSION %u, Aborting...\n", version);
-					error = true;
-				}
-				break;
-			}
-			
-			default:
-				_MESSAGE("Error Reading From Cosave: UNHANDLED TYPE %08X, Aborting...\n", type);
-				error = true;
-				break;
+			if(version == kSerializationDataVersion)
+				while ((SInt32)length > 0) //Safety cast
+					recordsRead += ProcessLoadEntry(intfc, &length);
+			else
+				{ _MESSAGE("Error Reading Cosave: Unknown Data Version %u, Aborting...\n", version); error = true; }
 		}
+		else
+			{ _MESSAGE("Error Reading Cosave: Unhandled Type %08X, Aborting...\n", type); error = true; }
 	}
 
 	if (recordsRead && !error)
@@ -131,35 +111,28 @@ void Serialization_Load(SKSESerializationInterface* intfc)
 }
 
 
-
-
-
-void InitialLoadSetup()
-{
-	_MESSAGE("Building Event Sinks...");
-
-	//Add event sinks
-	// g_trackedStatsEventDispatcher->AddEventSink(&g_trackedStatsEventHandler);
-
-}
-
 void SKSEMessageReceptor(SKSEMessagingInterface::Message* msg)
 {
-	if (msg->type == SKSEMessagingInterface::kMessage_PostLoad)
+	if (msg->type == SKSEMessagingInterface::kMessage_PostLoadGame) //after a save is loaded (d/n work when new game chosen)
+	{
+		PostLoadSetup();
+	}
+
+	if (msg->type == SKSEMessagingInterface::kMessage_PostLoad) //post plugin load (no game data)
 	{
 		//other plugins should register to receive interface/message here
 	}
 
-	else if (msg->type == SKSEMessagingInterface::kMessage_PostPostLoad)
+	else if (msg->type == SKSEMessagingInterface::kMessage_PostPostLoad) //right after postload (no game data)
 	{
 		//broadcast enchantment data interface
+		_MESSAGE("Broadcasting interface...");
 		g_messageInterface->Dispatch(g_pluginHandle, 'Itfc', &g_enchantmentDataInterface, sizeof(void*), NULL);
 	}
 
-	else if (msg->type == SKSEMessagingInterface::kMessage_InputLoaded)
+	else if (msg->type == SKSEMessagingInterface::kMessage_InputLoaded) //initial main menu load (limited game data)
 	{
-		//kMessage_InputLoaded only sent once, on initial Main Menu load
-		InitialLoadSetup();
+		PreLoadSetup();
 	}
 }
 
@@ -169,8 +142,7 @@ extern "C"
 
 bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 {
-
-	gLog.OpenRelative(CSIDL_MYDOCUMENTS, kLogPath);
+	g_Log.OpenRelative(CSIDL_MYDOCUMENTS, kLogPath);
 
 	_MESSAGE("EnchantReloadFix SKSE Plugin\nby egocarib\n\n"
 		"{ Fixes player-enchanted items having inflated gold value }\n"
@@ -179,7 +151,7 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 	//Populate plugin info structure
 	info->infoVersion =	PluginInfo::kInfoVersion;
 	info->name =		"EnchantReloadFix Plugin";
-	info->version =		1;
+	info->version =		2;
 
 	//Store plugin handle so we can identify ourselves later
 	g_pluginHandle = skse->GetPluginHandle();
@@ -209,9 +181,11 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 
 bool SKSEPlugin_Load(const SKSEInterface * skse)
 {
-	//WeaponEnchantCraftHook::CraftHook_Commit();
-	CraftHook_Commit();
-	GetCostliestEffectItemHook::CostliestEffect_Hook_Commit();
+	_MESSAGE("Planting hooks...");
+	CreateEnchantmentHook_Commit();
+	GetCostliestEffectItemHook::Hook_Commit();
+
+	_MESSAGE("Interfacing with skse...");
 
 	//Register callbacks and unique ID for serialization
 	g_serialization->SetUniqueID(g_pluginHandle, 'EGOC');
