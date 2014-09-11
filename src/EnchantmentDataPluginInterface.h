@@ -1,13 +1,11 @@
 #pragma once
 
 #include "EnchantmentInfo.h"
-#include "MenuHandler.h"
 
 
 class EnchantmentDataPluginInterface
 {
-	void* GetMenuHandler()			{ return &menu; }
-	void* GetEnchantmentTracker()	{ return &enchantTracker; }
+	void* GetEnchantmentTracker()	{ return &g_enchantTracker; }
 };
 
-EnchantmentDataPluginInterface g_enchantmentDataInterface;
+EnchantmentDataPluginInterface	g_enchantmentDataInterface;

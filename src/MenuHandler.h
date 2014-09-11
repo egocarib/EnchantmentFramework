@@ -1,10 +1,8 @@
 #pragma once
 
-#include "skse/GameMenus.h"
 #include "skse/GameEvents.h"
 #include "skse/GameObjects.h"
-
-
+#include "skse/GameMenus.h"
 
 
 struct TESTrackedStatsEvent
@@ -41,6 +39,7 @@ public:
 	virtual EventResult		ReceiveEvent(MenuOpenCloseEvent * evn, EventDispatcher<MenuOpenCloseEvent> * dispatcher);
 };
 
+extern	LocalMenuHandler	g_menuEventHandler;
 
 
 
@@ -58,7 +57,7 @@ private:
 public:
 	bool HasIndexed(EnchantmentItem* e)  { return (cMap.find(e) != cMap.end()); }
 
-	Condition* GetCondition(Enchantment* e, MagicItem::EffectItem* ei)
+	Condition* GetCondition(EnchantmentItem* e, MagicItem::EffectItem* ei)
 	{
 		if (cMap.find(e) == cMap.end())
 			return NULL;
@@ -101,23 +100,7 @@ public:
 	}
 };
 
-
 extern ConditionedWeaponEnchantments	g_weaponEnchantmentConditions;
-
-
-
-class MenuCore //Statics that don't need to change between loads in the same play session
-{
-public:
-	void InitializeMenuMonitor();
-
-	static LocalMenuHandler					thisMenu;
-	static BSFixedString					craftingMenu;
-};
-
-
-extern MenuCore menu;
-
 
 
 
