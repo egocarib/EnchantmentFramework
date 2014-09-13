@@ -1,4 +1,4 @@
-LIBRARY	"EnchantReloadFix"
+LIBRARY	"EnchantmentFramework"
 EXPORTS
 SKSEPlugin_Query
 SKSEPlugin_Load
