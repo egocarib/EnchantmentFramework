@@ -1,5 +1,6 @@
 #include "skse/PluginAPI.h"
 #include "skse/skse_version.h"
+#include "skse/PluginManager.h"
 #include "skse/GameRTTI.h"
 #include "EnchantmentInfo.h"
 #include "MenuHandler.h"
@@ -9,7 +10,7 @@
 #include <shlobj.h>
 
 IDebugLog						g_Log;
-const char*						kLogPath = "\\My Games\\Skyrim\\Logs\\EnchantReloadFix.log";
+const char*						kLogPath = "\\My Games\\Skyrim\\Logs\\EnchantmentFramework.log";
 
 PluginHandle					g_pluginHandle = kPluginHandle_Invalid;
 SKSESerializationInterface*		g_serialization = NULL;
@@ -83,8 +84,9 @@ UInt32 ProcessLoadEntry(SKSESerializationInterface* intfc, UInt32* const length)
 
 void Serialization_Load(SKSESerializationInterface* intfc)
 {
-	g_enchantTracker.Reset();
 	_MESSAGE("Loading...");
+
+	g_enchantTracker.Reset();
 
 	UInt32	type;
 	UInt32	version;
@@ -111,16 +113,39 @@ void Serialization_Load(SKSESerializationInterface* intfc)
 }
 
 
+void NullMessageReceptor(SKSEMessagingInterface::Message* msg) {} //Registered only to check the existence of other plugins
+
 void SKSEMessageReceptor(SKSEMessagingInterface::Message* msg)
 {
-	if (msg->type == SKSEMessagingInterface::kMessage_PostLoadGame) //after a save is loaded (d/n work when new game chosen)
-	{
-		PostLoadSetup();
-	}
+	static bool active = true;
+	if (!active)
+		return;
 
 	if (msg->type == SKSEMessagingInterface::kMessage_PostLoad) //post plugin load (no game data)
 	{
-		//other plugins should register to receive interface/message here
+		if (g_messageInterface->RegisterListener(g_pluginHandle, "EnchantReloadFix Plugin", NullMessageReceptor))
+		{
+			_MESSAGE("Incompatible Plugin detected - EnchantReloadFix.dll - please remove this plugin and restart the game.\nTerminating...");
+			active = false;
+			return; //Abandon ship!!
+		}
+
+		_MESSAGE("Initializing...");
+
+		_MESSAGE("Planting hooks...");
+		CreateEnchantmentHook_Commit();
+		GetCostliestEffectItemHook::Hook_Commit();
+
+		_MESSAGE("Interfacing with SKSE...");
+
+		//Register callbacks and unique ID for serialization
+		g_serialization->SetUniqueID(g_pluginHandle, 'EEFr');
+		g_serialization->SetRevertCallback(g_pluginHandle, Serialization_Revert);
+		g_serialization->SetSaveCallback(g_pluginHandle, Serialization_Save);
+		g_serialization->SetLoadCallback(g_pluginHandle, Serialization_Load);
+
+		//other plugins should register to receive interface/message in their own kMessage_PostLoad, like this:
+			//g_messageInterface->RegisterListener(g_pluginHandle, "egocarib Enchantment Framework", <callbackName>);
 	}
 
 	else if (msg->type == SKSEMessagingInterface::kMessage_PostPostLoad) //right after postload (no game data)
@@ -134,6 +159,11 @@ void SKSEMessageReceptor(SKSEMessagingInterface::Message* msg)
 	{
 		PreLoadSetup();
 	}
+
+	else if (msg->type == SKSEMessagingInterface::kMessage_PostLoadGame) //after a save is loaded (d/n work when new game chosen)
+	{
+		PostLoadSetup();
+	}
 }
 
 
@@ -144,14 +174,16 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 {
 	g_Log.OpenRelative(CSIDL_MYDOCUMENTS, kLogPath);
 
-	_MESSAGE("EnchantReloadFix SKSE Plugin\nby egocarib\n\n"
-		"{ Fixes player-enchanted items having inflated gold value }\n"
-		"{ and draining higher amounts of charge after game reload }\n");
+	_MESSAGE("Enchantment Framework\nby egocarib\n\n"
+		"{ A plugin framework for tracking and analyzing enchantments. }\n"
+		"{ Includes built-in fix for Enchantment Reload bug. }\n");
+		// "{ Fixes player-enchanted items having inflated gold value }\n"
+		// "{ and draining higher amounts of charge after game reload }\n");
 
 	//Populate plugin info structure
 	info->infoVersion =	PluginInfo::kInfoVersion;
-	info->name =		"EnchantReloadFix Plugin";
-	info->version =		2;
+	info->name =		"egocarib Enchantment Framework";
+	info->version =		1;
 
 	//Store plugin handle so we can identify ourselves later
 	g_pluginHandle = skse->GetPluginHandle();
@@ -181,18 +213,6 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 
 bool SKSEPlugin_Load(const SKSEInterface * skse)
 {
-	_MESSAGE("Planting hooks...");
-	CreateEnchantmentHook_Commit();
-	GetCostliestEffectItemHook::Hook_Commit();
-
-	_MESSAGE("Interfacing with skse...");
-
-	//Register callbacks and unique ID for serialization
-	g_serialization->SetUniqueID(g_pluginHandle, 'EGOC');
-	g_serialization->SetRevertCallback(g_pluginHandle, Serialization_Revert);
-	g_serialization->SetSaveCallback(g_pluginHandle, Serialization_Save);
-	g_serialization->SetLoadCallback(g_pluginHandle, Serialization_Load);
-
 	//Register callback for SKSE messaging interface
 	g_messageInterface->RegisterListener(g_pluginHandle, "SKSE", SKSEMessageReceptor);
 
