@@ -5,7 +5,7 @@
 #include "EnchantmentInfo.h"
 #include "MenuHandler.h"
 #include "CraftHooks.h"
-#include "EnchantmentDataPluginInterface.h"
+#include "api/EnchantmentFrameworkAPI.h"
 #include "[PluginLibrary]/SerializeForm.h"
 #include <shlobj.h>
 
@@ -31,7 +31,7 @@ void PostLoadSetup()
 	if (firstLoad)
 	{
 		firstLoad = false;
-		_MESSAGE("First load, initializating...");
+		_MESSAGE("(First load, initializating...)");
 		EnchantmentDataHandler::Visit(&g_weaponEnchantmentConditions);
 	}
 }
@@ -130,8 +130,6 @@ void SKSEMessageReceptor(SKSEMessagingInterface::Message* msg)
 			return; //Abandon ship!!
 		}
 
-		_MESSAGE("Initializing...");
-
 		_MESSAGE("Planting hooks...");
 		CreateEnchantmentHook_Commit();
 		GetCostliestEffectItemHook::Hook_Commit();
@@ -151,8 +149,8 @@ void SKSEMessageReceptor(SKSEMessagingInterface::Message* msg)
 	else if (msg->type == SKSEMessagingInterface::kMessage_PostPostLoad) //right after postload (no game data)
 	{
 		//broadcast enchantment data interface
-		_MESSAGE("Broadcasting interface...");
-		g_messageInterface->Dispatch(g_pluginHandle, 'Itfc', &g_enchantmentDataInterface, sizeof(void*), NULL);
+		_MESSAGE("Broadcasting interface to other plugins...");
+		g_messageInterface->Dispatch(g_pluginHandle, 'Itfc', &g_enchantmentFrameworkInterface, sizeof(void*), NULL);
 	}
 
 	else if (msg->type == SKSEMessagingInterface::kMessage_InputLoaded) //initial main menu load (limited game data)
@@ -176,9 +174,7 @@ bool SKSEPlugin_Query(const SKSEInterface * skse, PluginInfo * info)
 
 	_MESSAGE("Enchantment Framework\nby egocarib\n\n"
 		"{ A plugin framework for tracking and analyzing enchantments. }\n"
-		"{ Includes built-in fix for Enchantment Reload bug. }\n");
-		// "{ Fixes player-enchanted items having inflated gold value }\n"
-		// "{ and draining higher amounts of charge after game reload }\n");
+		"{    Includes built-in fix for the Enchantment Reload bug.    }\n");
 
 	//Populate plugin info structure
 	info->infoVersion =	PluginInfo::kInfoVersion;

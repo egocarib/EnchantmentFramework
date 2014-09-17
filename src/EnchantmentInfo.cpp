@@ -1,7 +1,6 @@
 #include "EnchantmentInfo.h"
 #include "MenuHandler.h"
 #include "CraftHooks.h"
-#include "skse/GameRTTI.h"
 
 
 PersistentWeaponEnchantments	g_enchantTracker;
@@ -106,3 +105,42 @@ void PersistentWeaponEnchantments::FixIfChaosDamage(EnchantmentItem* pEnch) //De
 
 	//See early commits for formula to update enchant cost too, now removed
 }
+
+
+
+//Enchantment Framework Methods:
+namespace EnchantmentFramework
+{
+
+EnchantmentVec GetAllCraftedEnchantments()
+{
+	struct
+	{
+		EnchantmentVec eVec;
+		bool Accept(EnchantmentItem* e, EnchantmentInfoEntry ei)
+		{
+			eVec.push_back(e);
+			return true;
+		}
+	} persistentEnchantments;
+
+	g_enchantTracker.Visit(&persistentEnchantments);
+
+	return persistentEnchantments.eVec;
+}
+
+
+EnchantmentVec GetCraftedEnchantmentParents(EnchantmentItem* customEnchantment)
+{
+	return g_enchantTracker.GetParents(customEnchantment);
+}
+
+};
+
+
+EnchantmentFrameworkInterface g_enchantmentFrameworkInterface =
+{
+	EnchantmentFrameworkInterface::kInterfaceVersion,
+	EnchantmentFramework::GetAllCraftedEnchantments,
+	EnchantmentFramework::GetCraftedEnchantmentParents
+};

@@ -1,11 +1,15 @@
 #pragma once
 
 #include "[PluginLibrary]/SerializeForm.h"
+#include "api/EnchantmentFrameworkAPI.h"
 #include "skse/GameData.h"
 #include "skse/GameObjects.h"
+#include "skse/GameRTTI.h"
 #include <vector>
 #include <map>
 
+
+extern EnchantmentFrameworkInterface	g_enchantmentFrameworkInterface;
 
 
 typedef std::vector<EffectSetting*> 						MagEffVec;
@@ -120,6 +124,32 @@ public:
 	void Push(EnchantmentItem* enchantment, EnchantmentInfoEntry &info) //Rebuild map during load
 	{
 		playerWeaponEnchants[enchantment] = info;
+	}
+
+	// EnchantmentVec GetAllCraftedEnchantments();
+	// EnchantmentVec GetCraftedEnchantmentParents(EnchantmentItem* customEnchantment);
+	template <typename Visitor>
+	void Visit(Visitor* visitor)
+	{
+		for (EnchantmentInfoMap::iterator it = playerWeaponEnchants.begin(); it != playerWeaponEnchants.end(); it++)
+			visitor->Accept(it->first, it->second);
+	}
+
+	EnchantmentVec GetParents(EnchantmentItem* e)
+	{
+		EnchantmentVec theseParents;
+
+		EnchantmentInfoMap::iterator it = playerWeaponEnchants.find(e);
+		if (it != playerWeaponEnchants.end())
+		{
+			for (UInt32 i = 0; i < it->second.parentForms.data.size(); i++)
+			{
+				EnchantmentItem* e = DYNAMIC_CAST(LookupFormByID(it->second.parentForms.data[i]), TESForm, EnchantmentItem);
+				if (e)
+					theseParents.push_back(e);
+			}
+		}
+		return theseParents;
 	}
 
 	void PostCraftUpdate(); //Fixes new crafted enchantments and adds them to the tracker
